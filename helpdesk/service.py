@@ -44,11 +44,13 @@ class HelpdeskService:
         if reopened_ticket is not None:
             reopened_ticket.touch(f"Reaberto por nova mensagem: {message.text!r}")
             reopened_ticket.status = Status.ABERTO
+            self.repository.update(reopened_ticket)
             self.transport.send(message.sender, replies.reopened(reopened_ticket))
             return reopened_ticket
 
         ticket = self._create_ticket(message)
         self._assign(ticket)
+        self.repository.update(ticket)
         self.transport.send(message.sender, replies.acknowledgement(ticket))
         return ticket
 
@@ -59,6 +61,7 @@ class HelpdeskService:
         ticket = self._require(ticket_id)
         ticket.status = Status.EM_ANDAMENTO
         ticket.touch("Atendimento iniciado.")
+        self.repository.update(ticket)
         return ticket
 
     def resolve(self, ticket_id: int, note: str = "") -> Ticket:
@@ -66,6 +69,7 @@ class HelpdeskService:
         ticket.status = Status.RESOLVIDO
         ticket.touch(f"Resolvido. {note}".strip())
         ticket.closed_at = ticket.updated_at
+        self.repository.update(ticket)
         return ticket
 
     def close(self, ticket_id: int) -> Ticket:
@@ -73,6 +77,7 @@ class HelpdeskService:
         ticket.status = Status.FECHADO
         ticket.touch("Fechado.")
         ticket.closed_at = ticket.updated_at
+        self.repository.update(ticket)
         return ticket
 
     # ------------------------------------------------------------------ #

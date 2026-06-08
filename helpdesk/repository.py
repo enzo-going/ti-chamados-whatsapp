@@ -17,11 +17,15 @@ class TicketRepository(Protocol):
 
     def add(self, ticket: Ticket) -> None: ...
 
+    def update(self, ticket: Ticket) -> None: ...
+
     def next_id(self) -> int: ...
 
     def get(self, ticket_id: int) -> Ticket | None: ...
 
     def list_open(self) -> list[Ticket]: ...
+
+    def all(self) -> list[Ticket]: ...
 
     def last_closed_for(self, sender: str) -> Ticket | None: ...
 
@@ -34,6 +38,12 @@ class InMemoryTicketRepository:
         self._seq = 0
 
     def add(self, ticket: Ticket) -> None:
+        self._tickets[ticket.id] = ticket
+
+    def update(self, ticket: Ticket) -> None:
+        # Em memória os chamados são guardados por referência, então a mutação
+        # já é visível; regravamos o objeto para manter o mesmo contrato das
+        # implementações persistentes (ex.: SQLite), onde update() é obrigatório.
         self._tickets[ticket.id] = ticket
 
     def next_id(self) -> int:
