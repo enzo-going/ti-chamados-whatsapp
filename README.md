@@ -1,4 +1,4 @@
-# WhatsApp Helpdesk Bot
+# ti-chamados-whatsapp
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-unittest-brightgreen?style=flat)
