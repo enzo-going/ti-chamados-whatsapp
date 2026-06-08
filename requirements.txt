@@ -1,0 +1,5 @@
+# O núcleo não tem dependências de runtime — Python 3.10+ puro.
+# Dependências abaixo são apenas para desenvolvimento/testes (opcionais).
+
+# pytest>=8.0        # alternativa ao unittest, se preferir
+# ruff>=0.5          # linter/formatter
