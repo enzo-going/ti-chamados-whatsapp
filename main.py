@@ -3,8 +3,9 @@
 Roda sem WhatsApp real: simula mensagens de funcionários chegando e mostra o
 chamado criado e a resposta automática. Útil para visualizar o fluxo.
 
-    python main.py            # roda um roteiro de exemplo
-    python main.py --repl     # modo interativo: você digita as mensagens
+    python main.py                 # roteiro de exemplo (em memória, efêmero)
+    python main.py --repl          # modo interativo: você digita as mensagens
+    python main.py --db chamados.sqlite3   # persiste os chamados em SQLite
 """
 
 from __future__ import annotations
@@ -17,7 +18,9 @@ import sys
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
+from helpdesk import config
 from helpdesk.models import Attendant, Message
+from helpdesk.repository import SqliteTicketRepository, TicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
 
@@ -52,9 +55,24 @@ def _print_ticket(service: HelpdeskService, transport: FakeTransport, sender: st
         print(f"    resposta automática: {primeira_linha}")
 
 
-def run_roteiro() -> None:
+def _make_service(db_path: str | None) -> tuple[HelpdeskService, FakeTransport]:
+    """Monta o serviço com transporte de mentira e o repositório escolhido.
+
+    Sem `--db`, usa o repositório em memória (demo efêmera). Com `--db`, persiste
+    os chamados no arquivo SQLite informado.
+    """
     transport = FakeTransport()
-    service = HelpdeskService(transport=transport, attendants=ATENDENTES)
+    repository: TicketRepository | None = (
+        SqliteTicketRepository(db_path) if db_path else None
+    )
+    service = HelpdeskService(
+        transport=transport, attendants=ATENDENTES, repository=repository
+    )
+    return service, transport
+
+
+def run_roteiro(db_path: str | None = None) -> None:
+    service, transport = _make_service(db_path)
     print("=== Simulação de chamados (transporte de mentira) ===\n")
     for sender, texto in ROTEIRO:
         print(f"[{sender}] {texto}")
@@ -64,9 +82,8 @@ def run_roteiro() -> None:
     print(f"Total de chamados abertos: {len(service.repository.all())}")
 
 
-def run_repl() -> None:
-    transport = FakeTransport()
-    service = HelpdeskService(transport=transport, attendants=ATENDENTES)
+def run_repl(db_path: str | None = None) -> None:
+    service, transport = _make_service(db_path)
     print("Modo interativo. Digite uma mensagem (ou 'sair').\n")
     while True:
         try:
@@ -85,11 +102,22 @@ def run_repl() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Demo do helpdesk de TI por WhatsApp.")
     parser.add_argument("--repl", action="store_true", help="modo interativo")
+    parser.add_argument(
+        "--db",
+        metavar="ARQUIVO",
+        nargs="?",
+        const=config.database_path(),
+        default=None,
+        help=(
+            "persiste os chamados em SQLite; sem valor usa HELPDESK_DB_PATH "
+            "(padrão: %(const)s). Omitido, roda em memória."
+        ),
+    )
     args = parser.parse_args()
     if args.repl:
-        run_repl()
+        run_repl(args.db)
     else:
-        run_roteiro()
+        run_roteiro(args.db)
 
 
 if __name__ == "__main__":
