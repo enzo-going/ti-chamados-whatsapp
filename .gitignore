@@ -30,3 +30,6 @@ htmlcov/
 Thumbs.db
 .idea/
 .vscode/
+
+# Obsidian (configuração local do cofre — não versionar)
+.obsidian/
