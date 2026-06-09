@@ -113,6 +113,23 @@ integração externa real (sem WhatsApp, sem Cloud API, sem webhook público).
 mensagem de chamado aberto ainda abre outro) e o transporte/borda reais, que
 dependem das decisões da Fase 3.
 
+## 8. Wallboard da sala de TI (consideração de produto)
+
+Há a possibilidade (ainda não confirmada) de exibir os chamados numa TV na sala
+de TI. Direção registrada para orientar o design futuro:
+
+- **Painel interno somente leitura, com atualização automática**, em vez de
+  deixar o WhatsApp Web aberto na TV — mais profissional, controlável e seguro.
+- **Mínimo de dados, foco operacional:** número, categoria, prioridade, status,
+  responsável e tempo em aberto.
+- **Privacidade:** não expor telefone, texto completo das mensagens, nomes
+  desnecessários nem dados sensíveis. Tecnicamente, o wallboard consumiria uma
+  **projeção restrita** do `Ticket` (apenas os campos acima), não o objeto
+  inteiro — mantendo a separação entre dados internos e a tela exibida.
+
+Sem implementação por enquanto (apenas documentação). Tende a se apoiar na Fase 4
+(interface de atendentes) e/ou na Fase 5 (observabilidade).
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)
