@@ -44,6 +44,9 @@ python main.py --repl
 # Persistindo os chamados em SQLite (sobrevive a reinícios)
 python main.py --db chamados.sqlite3
 
+# Camada de entrada via HTTP local (127.0.0.1; recebe eventos em JSON)
+python -m helpdesk.http_app --db chamados.sqlite3
+
 # Testes
 python -m unittest discover -s tests
 ```

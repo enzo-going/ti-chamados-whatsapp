@@ -24,6 +24,8 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/transport.py` | Interface de envio + `FakeTransport` |
 | `helpdesk/replies.py` | Mensagens automáticas (pt-BR) |
 | `helpdesk/service.py` | Orquestra o fluxo completo |
+| `helpdesk/inbound.py` | Camada de entrada: payload neutro → `Message`, com idempotência |
+| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`) para exercitar a entrada |
 | `helpdesk/config.py` | Caminho do banco via variável de ambiente |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
 | `tests/` | Suíte de testes (unittest) |

@@ -90,6 +90,29 @@ na ordem de classificação. Assim, frases de solicitação vencem, enquanto
 esse comportamento, além de um teste que verifica que toda categoria tem rótulo
 público em `replies.py`.
 
+## 7. Entrada local e idempotente (início da Fase 2)
+
+A Fase 2 começou por uma **camada de entrada local e testável**, sem qualquer
+integração externa real (sem WhatsApp, sem Cloud API, sem webhook público).
+
+- **Payload neutro.** `helpdesk/inbound.py` define um formato JSON genérico
+  (`event_id`, `sender`, `text`, `sender_name?`, `timestamp?`), independente de
+  plataforma. `parse_payload()` valida e converte em `Message`; o `MessageGateway`
+  encaminha ao serviço. Assim, a borda real (Fase 3) só precisará traduzir o
+  formato dela para esse payload.
+- **Idempotência persistente.** Entregas "pelo menos uma vez" são comuns, então o
+  mesmo evento pode chegar repetido. Cada `event_id` processado é registrado na
+  tabela `processed_events` (SQLite); uma reentrega devolve o chamado existente,
+  sem duplicar. Sobrevive a reinícios. O schema subiu para a versão 2 (criação
+  idempotente via `IF NOT EXISTS`).
+- **Servidor HTTP local.** `helpdesk/http_app.py` (biblioteca padrão) liga apenas
+  em `127.0.0.1`, para exercitar a entrada de ponta a ponta com payloads próprios.
+  Não é exposto à internet.
+
+**Pendente nesta frente:** anexar follow-up a um chamado **aberto** (hoje uma nova
+mensagem de chamado aberto ainda abre outro) e o transporte/borda reais, que
+dependem das decisões da Fase 3.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)
