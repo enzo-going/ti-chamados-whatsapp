@@ -37,6 +37,8 @@ class TicketRepository(Protocol):
 
     def last_closed_for(self, sender: str) -> Ticket | None: ...
 
+    def last_open_for(self, sender: str) -> Ticket | None: ...
+
     def seen_event(self, event_id: str) -> int | None: ...
 
     def record_event(self, event_id: str, ticket_id: int) -> None: ...
@@ -71,6 +73,14 @@ class InMemoryTicketRepository:
 
     def all(self) -> list[Ticket]:
         return list(self._tickets.values())
+
+    def last_open_for(self, sender: str) -> Ticket | None:
+        opens = [
+            t for t in self._tickets.values() if t.sender == sender and t.is_open
+        ]
+        if not opens:
+            return None
+        return max(opens, key=lambda t: t.updated_at)
 
     def last_closed_for(self, sender: str) -> Ticket | None:
         """Chamado resolvido/fechado mais recente do remetente (ou None).
@@ -251,6 +261,19 @@ class SqliteTicketRepository:
     def all(self) -> list[Ticket]:
         rows = self._conn.execute("SELECT * FROM tickets ORDER BY id").fetchall()
         return [_row_to_ticket(r) for r in rows]
+
+    def last_open_for(self, sender: str) -> Ticket | None:
+        """Chamado aberto mais recente (por última atividade) do remetente."""
+        row = self._conn.execute(
+            """
+            SELECT * FROM tickets
+            WHERE sender = ? AND status NOT IN (?, ?)
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (sender, *_CLOSED_STATUSES),
+        ).fetchone()
+        return _row_to_ticket(row) if row is not None else None
 
     def last_closed_for(self, sender: str) -> Ticket | None:
         """Chamado resolvido/fechado mais recente do remetente (ou None).

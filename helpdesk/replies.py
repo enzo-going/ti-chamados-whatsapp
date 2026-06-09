@@ -45,6 +45,14 @@ def reopened(ticket: Ticket) -> str:
     )
 
 
+def followup(ticket: Ticket) -> str:
+    """Confirma que a mensagem foi anexada a um chamado já aberto."""
+    return (
+        f"📝 Anotamos a informação no seu chamado *#{ticket.id}*, que segue em "
+        "atendimento. Não abrimos um novo chamado."
+    )
+
+
 def assigned(ticket: Ticket) -> str:
     """Avisa quem vai atender (opcional, usado quando há atribuição imediata)."""
     nome = ticket.assignee.name if ticket.assignee else "a equipe"

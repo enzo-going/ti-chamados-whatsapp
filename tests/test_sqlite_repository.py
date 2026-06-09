@@ -87,6 +87,14 @@ class TestContract(SqliteRepoTestCase):
         make_ticket(self.repo, "a", Status.ABERTO)
         self.assertIsNone(self.repo.last_closed_for("a"))
 
+    def test_last_open_for_ignora_fechados(self):
+        self.assertIsNone(self.repo.last_open_for("a"))
+        aberto = make_ticket(self.repo, "a", Status.ATRIBUIDO)
+        make_ticket(self.repo, "a", Status.RESOLVIDO)  # fechado, deve ser ignorado
+        encontrado = self.repo.last_open_for("a")
+        self.assertIsNotNone(encontrado)
+        self.assertEqual(encontrado.id, aberto.id)
+
     def test_update_persiste_mudancas(self):
         t = make_ticket(self.repo, "a", Status.ABERTO)
         t.status = Status.EM_ANDAMENTO

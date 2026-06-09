@@ -105,6 +105,43 @@ class TestReopen(unittest.TestCase):
         self.assertNotEqual(resultado.id, t.id)
 
 
+class TestFollowup(unittest.TestCase):
+    def test_anexa_em_chamado_aberto(self):
+        service, transport = make_service()
+        t1 = service.handle_message(Message(sender="z", text="meu computador não liga"))
+        t2 = service.handle_message(Message(sender="z", text="já tentei reiniciar e nada"))
+        self.assertEqual(t1.id, t2.id)  # mesmo chamado
+        self.assertEqual(len(service.repository.all()), 1)  # não duplicou
+        self.assertIn("Anotamos", transport.last_to("z"))  # resposta de follow-up
+        historico = service.repository.get(t1.id).history
+        self.assertTrue(any("já tentei reiniciar" in h for h in historico))
+
+    def test_followup_mantem_responsavel(self):
+        service, _ = make_service()
+        t1 = service.handle_message(Message(sender="z", text="meu computador não liga"))
+        t2 = service.handle_message(Message(sender="z", text="continua sem ligar"))
+        self.assertEqual(t2.assignee, t1.assignee)  # não reatribui
+
+    def test_respeita_janela_de_continuidade(self):
+        service, _ = make_service(reopen_hours=2)
+        t1 = service.handle_message(Message(sender="z", text="meu computador não liga"))
+        tardia = Message(
+            sender="z",
+            text="agora é outro assunto",
+            received_at=t1.updated_at + timedelta(hours=5),
+        )
+        t2 = service.handle_message(tardia)
+        self.assertNotEqual(t1.id, t2.id)  # fora da janela -> chamado novo
+        self.assertEqual(len(service.repository.all()), 2)
+
+    def test_remetente_diferente_nao_anexa(self):
+        service, _ = make_service()
+        t1 = service.handle_message(Message(sender="z", text="meu computador não liga"))
+        t2 = service.handle_message(Message(sender="w", text="a impressora travou"))
+        self.assertNotEqual(t1.id, t2.id)
+        self.assertEqual(len(service.repository.all()), 2)
+
+
 class TestLifecycle(unittest.TestCase):
     def test_fluxo_completo(self):
         service, _ = make_service()
