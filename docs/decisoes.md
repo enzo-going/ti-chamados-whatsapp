@@ -76,6 +76,20 @@ de tomar. O efeito de não persistir é apenas cosmético (após um restart a
 distribuição entre atendentes pode recomeçar do primeiro); não há perda de dados.
 Registrado no [roadmap](roadmap.md).
 
+## 6. Categoria de triagem para empréstimo de equipamento
+
+Adicionada a categoria `emprestimo_equipamento` (nome público: **empréstimo de
+equipamento**) para solicitações de notebook de apoio do setor de TI.
+
+**Ambiguidade tratada:** "notebook" já era gatilho de `hardware` (equipamento com
+defeito). Para distinguir *solicitar* de *defeito*, a categoria usa **gatilhos por
+frase** ("preciso de um notebook", "notebook emprestado", "reserva de notebook",
+"notebook para reunião", "equipamento temporário"…) e fica **antes de `hardware`**
+na ordem de classificação. Assim, frases de solicitação vencem, enquanto
+"meu notebook não liga" continua em `hardware`. Há teste de regressão garantindo
+esse comportamento, além de um teste que verifica que toda categoria tem rótulo
+público em `replies.py`.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

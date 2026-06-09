@@ -13,6 +13,7 @@ _CATEGORY_LABEL = {
     Category.SOFTWARE: "Software / Sistemas",
     Category.ACESSO: "Acesso / Senhas",
     Category.IMPRESSORA: "Impressora",
+    Category.EMPRESTIMO_EQUIPAMENTO: "Empréstimo de equipamento",
     Category.OUTROS: "Geral",
 }
 

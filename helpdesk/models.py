@@ -23,6 +23,7 @@ class Category(str, Enum):
     SOFTWARE = "software"
     ACESSO = "acesso"
     IMPRESSORA = "impressora"
+    EMPRESTIMO_EQUIPAMENTO = "emprestimo_equipamento"
     OUTROS = "outros"
 
 

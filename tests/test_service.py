@@ -49,6 +49,21 @@ class TestCreateAndReply(unittest.TestCase):
         self.assertNotEqual(t1.assignee, t2.assignee)
         self.assertNotEqual(t2.assignee, t3.assignee)
 
+    def test_emprestimo_equipamento_gera_chamado_e_resposta(self):
+        service, transport = make_service()
+        t = service.handle_message(
+            Message(sender="x", text="preciso de um notebook emprestado para reunião")
+        )
+        self.assertEqual(t.category, Category.EMPRESTIMO_EQUIPAMENTO)
+        self.assertIn("Empréstimo de equipamento", transport.last_to("x"))
+
+    def test_toda_categoria_tem_rotulo_de_resposta(self):
+        # Garante que cada categoria do domínio tem rótulo público em replies.
+        from helpdesk.replies import _CATEGORY_LABEL
+
+        for categoria in Category:
+            self.assertIn(categoria, _CATEGORY_LABEL, msg=str(categoria))
+
 
 class TestReopen(unittest.TestCase):
     def test_reabre_dentro_da_janela(self):

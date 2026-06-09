@@ -91,6 +91,7 @@ testar sem WhatsApp real e plugar o transporte oficial depois sem reescrever nad
 | `software` | "sistema travou", "programa", "lento" |
 | `acesso` | "senha", "login", "email bloqueado" |
 | `impressora` | "impressora", "imprimir", "toner" |
+| empréstimo de equipamento | "preciso de um notebook", "notebook emprestado", "reserva de notebook", "notebook para reunião", "equipamento temporário" |
 | `outros` | fallback |
 
 Prioridade **alta** é inferida por sinais de impacto coletivo ("caiu", "ninguém

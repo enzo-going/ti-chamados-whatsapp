@@ -39,6 +39,31 @@ class TestCategory(unittest.TestCase):
             Category.ACESSO,
         )
 
+    def test_emprestimo_equipamento(self):
+        gatilhos = [
+            "preciso de um notebook",
+            "notebook emprestado",
+            "emprestar notebook",
+            "reserva de notebook",
+            "notebook para reunião",
+            "equipamento temporário",
+            "pegar notebook",
+        ]
+        for texto in gatilhos:
+            self.assertEqual(
+                classify_category(texto), Category.EMPRESTIMO_EQUIPAMENTO, msg=texto
+            )
+
+    def test_notebook_com_defeito_continua_hardware(self):
+        # Solicitar ≠ defeito: "notebook" sozinho/quebrado segue como HARDWARE.
+        self.assertEqual(classify_category("meu notebook não liga"), Category.HARDWARE)
+
+    def test_emprestimo_nao_rouba_outras_categorias(self):
+        # Mensagens de outras categorias não devem virar empréstimo.
+        self.assertEqual(classify_category("a rede caiu no setor"), Category.REDE)
+        self.assertEqual(classify_category("esqueci minha senha"), Category.ACESSO)
+        self.assertEqual(classify_category("a impressora está sem toner"), Category.IMPRESSORA)
+
 
 class TestPriority(unittest.TestCase):
     def test_alta(self):
