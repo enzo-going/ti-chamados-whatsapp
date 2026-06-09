@@ -26,11 +26,14 @@ from helpdesk.repository import SqliteTicketRepository, TicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
 
+# Atendentes de exemplo, com papéis genéricos. O quadro real é rotativo e não
+# deve ser fixado no código — ver roadmap (atendentes configuráveis, com
+# ativos/inativos e papéis).
 ATENDENTES = [
-    Attendant("ti1", "Enzo"),
-    Attendant("ti2", "Ana"),
-    Attendant("ti3", "Bruno"),
-    Attendant("ti4", "Carla"),
+    Attendant("ti1", "Atendente 1"),
+    Attendant("ti2", "Atendente 2"),
+    Attendant("ti3", "Atendente 3"),
+    Attendant("ti4", "Atendente 4"),
 ]
 
 ROTEIRO = [

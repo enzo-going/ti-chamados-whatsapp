@@ -147,6 +147,16 @@ Quando a mesma pessoa continua escrevendo sobre o mesmo problema, a mensagem é
 Interação com a idempotência: a deduplicação por `event_id` continua valendo
 antes de tudo, então a reentrega do mesmo evento nunca chega a virar follow-up.
 
+## 10. Atendentes: papéis genéricos e cadastro configurável (futuro)
+
+O repositório é público, então os arquivos **não** registram nomes reais de
+funcionários: os atendentes de exemplo usam papéis genéricos ("Atendente 1"…).
+
+Como a equipe tem rotatividade, o quadro **não deve ser fixado no código**. Fica
+previsto (futuro) um cadastro configurável de atendentes, com estado
+**ativo/inativo** (apenas ativos entram no rodízio) e **papéis/cargos**. Sem
+implementação agora — apenas a diretriz e os exemplos já genéricos.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

@@ -55,7 +55,7 @@ Exemplo de saída do `python main.py`:
 
 ```
 [5513990000001] Bom dia! A rede caiu aqui no segundo andar, ninguém consegue acessar nada
-  -> Chamado #1 | rede | prioridade alta | atendente: Enzo
+  -> Chamado #1 | rede | prioridade alta | atendente: Atendente 1
     resposta automática: ✅ Recebemos seu chamado *#1*.
 ```
 
