@@ -99,7 +99,16 @@ class TestContract(SqliteRepoTestCase):
         self.assertIn("nota nova", recarregado.history)
 
     def test_schema_version_carimbada(self):
-        self.assertEqual(self.repo.schema_version(), 1)
+        self.assertEqual(self.repo.schema_version(), 2)
+
+    def test_eventos_processados(self):
+        self.assertIsNone(self.repo.seen_event("e1"))
+        t = make_ticket(self.repo, "a", Status.ABERTO)
+        self.repo.record_event("e1", t.id)
+        self.assertEqual(self.repo.seen_event("e1"), t.id)
+        # Regravar o mesmo evento é idempotente (não falha nem altera).
+        self.repo.record_event("e1", t.id)
+        self.assertEqual(self.repo.seen_event("e1"), t.id)
 
 
 class TestPersistencia(SqliteRepoTestCase):

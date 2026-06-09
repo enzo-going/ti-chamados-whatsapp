@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Protocol
 
 from helpdesk.models import Attendant, Category, Priority, Status, Ticket
@@ -37,6 +37,10 @@ class TicketRepository(Protocol):
 
     def last_closed_for(self, sender: str) -> Ticket | None: ...
 
+    def seen_event(self, event_id: str) -> int | None: ...
+
+    def record_event(self, event_id: str, ticket_id: int) -> None: ...
+
 
 class InMemoryTicketRepository:
     """Implementação simples em memória (dict por id)."""
@@ -44,6 +48,7 @@ class InMemoryTicketRepository:
     def __init__(self) -> None:
         self._tickets: dict[int, Ticket] = {}
         self._seq = 0
+        self._events: dict[str, int] = {}
 
     def add(self, ticket: Ticket) -> None:
         self._tickets[ticket.id] = ticket
@@ -84,6 +89,12 @@ class InMemoryTicketRepository:
             return None
         return max(closed, key=lambda t: t.closed_at)  # type: ignore[arg-type]
 
+    def seen_event(self, event_id: str) -> int | None:
+        return self._events.get(event_id)
+
+    def record_event(self, event_id: str, ticket_id: int) -> None:
+        self._events[event_id] = ticket_id
+
 
 # --------------------------------------------------------------------------- #
 # Implementação SQLite
@@ -105,11 +116,20 @@ CREATE TABLE IF NOT EXISTS tickets (
     closed_at     TEXT,
     history       TEXT    NOT NULL DEFAULT '[]'
 );
+
+-- Idempotência: registra os eventos de entrada já processados, para que a mesma
+-- mensagem externa entregue mais de uma vez não gere chamados duplicados.
+CREATE TABLE IF NOT EXISTS processed_events (
+    event_id     TEXT    PRIMARY KEY,
+    ticket_id    INTEGER NOT NULL,
+    processed_at TEXT    NOT NULL
+);
 """
 
 # Versão atual do schema. Gancho para migrações futuras: ao alterar o schema,
 # subir este número e migrar bancos com user_version menor antes de usá-los.
-_SCHEMA_VERSION = 1
+# v2: adiciona a tabela processed_events (idempotência da entrada).
+_SCHEMA_VERSION = 2
 
 # Status considerados "fechados" para fins de reabertura/listagem.
 _CLOSED_STATUSES = (Status.RESOLVIDO.value, Status.FECHADO.value)
@@ -123,6 +143,11 @@ def _dt_to_iso(value: datetime | None) -> str | None:
 def _iso_to_dt(value: str | None) -> datetime | None:
     """Reconstrói um datetime a partir do texto ISO 8601, ou None."""
     return datetime.fromisoformat(value) if value is not None else None
+
+
+def _now_iso() -> str:
+    """Instante atual em ISO 8601 (UTC)."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _row_to_ticket(row: sqlite3.Row) -> Ticket:
@@ -160,7 +185,9 @@ class SqliteTicketRepository:
         self._init_schema()
 
     def _init_schema(self) -> None:
-        self._conn.execute(_SCHEMA)
+        # executescript permite múltiplos CREATE TABLE; IF NOT EXISTS torna a
+        # criação idempotente e migra bancos antigos (cria tabelas que faltam).
+        self._conn.executescript(_SCHEMA)
         # PRAGMA não aceita parâmetro vinculado (?); interpolamos uma constante
         # inteira controlada por nós, então não há risco de injeção.
         self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
@@ -241,6 +268,21 @@ class SqliteTicketRepository:
             (sender, *_CLOSED_STATUSES),
         ).fetchone()
         return _row_to_ticket(row) if row is not None else None
+
+    # -- idempotência da entrada ------------------------------------------- #
+    def seen_event(self, event_id: str) -> int | None:
+        row = self._conn.execute(
+            "SELECT ticket_id FROM processed_events WHERE event_id = ?", (event_id,)
+        ).fetchone()
+        return int(row["ticket_id"]) if row is not None else None
+
+    def record_event(self, event_id: str, ticket_id: int) -> None:
+        self._conn.execute(
+            "INSERT OR IGNORE INTO processed_events (event_id, ticket_id, processed_at) "
+            "VALUES (?, ?, ?)",
+            (event_id, ticket_id, _now_iso()),
+        )
+        self._conn.commit()
 
     # -- ciclo de vida da conexão ------------------------------------------ #
     def close(self) -> None:
