@@ -9,6 +9,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 
 ## Documentos
 
+- [Arquitetura](arquitetura.md) — visão de componentes, fluxo e ciclo de vida (com diagramas).
 - [Roadmap](roadmap.md) — plano incremental por fases e decisões em aberto.
 - [Registro de decisões](decisoes.md) — decisões de arquitetura (ADR).
 - [Visão geral (README)](../README.md) — descrição e instruções de uso.
