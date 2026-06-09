@@ -130,6 +130,23 @@ de TI. Direção registrada para orientar o design futuro:
 Sem implementação por enquanto (apenas documentação). Tende a se apoiar na Fase 4
 (interface de atendentes) e/ou na Fase 5 (observabilidade).
 
+## 9. Follow-up em chamado aberto
+
+Quando a mesma pessoa continua escrevendo sobre o mesmo problema, a mensagem é
+**anexada ao chamado aberto** em vez de abrir outro — evitando duplicação.
+
+- O serviço busca o chamado **aberto** mais recente do remetente (`last_open_for`)
+  e anexa a mensagem ao histórico se a última atividade estiver dentro da **mesma
+  janela de continuidade** usada na reabertura (comparada com `updated_at`). Fora
+  da janela, trata como assunto novo e abre outro chamado.
+- O follow-up **não reatribui** o chamado (mantém o responsável) e **não muda o
+  status**; apenas registra a mensagem e desliza a janela.
+- Ordem em `handle_message`: follow-up (aberto) → reabertura (fechado recente) →
+  novo chamado.
+
+Interação com a idempotência: a deduplicação por `event_id` continua valendo
+antes de tudo, então a reentrega do mesmo evento nunca chega a virar follow-up.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

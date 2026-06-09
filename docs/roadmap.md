@@ -13,7 +13,7 @@ de helpdesk de TI por WhatsApp. Atualizado a cada fase.
 |---|---|---|
 | 0 | Fundação: config via env + logging | ⏳ (config já entrou na Fase 1) |
 | **1** | **Persistência SQLite** | **✅ concluída em 2026-06-08** |
-| 2 | Entrada HTTP local + idempotência (follow-up de chamado aberto pendente) | 🚧 inicial entregue |
+| 2 | Entrada HTTP local + idempotência + follow-up de chamado aberto | 🚧 em andamento |
 | 3 | Integração WhatsApp Cloud API (envio + segurança do webhook) | ⛔ depende da decisão do número |
 | 4 | Interface para atendentes (painel web ou comandos) | ⛔ depende da sua escolha |
 | 5 | Observabilidade: métricas, notificação de prioridade alta, auditoria | ⏳ |
@@ -56,11 +56,14 @@ python main.py --db chamados.sqlite3         # roda; rode 2x: os IDs continuam
   `record_event()`; idempotência **persistente** no SQLite (schema v2).
 - `helpdesk/http_app.py`: servidor HTTP **local** (`127.0.0.1`) da biblioteca
   padrão, para exercitar a entrada de ponta a ponta com payloads próprios.
+- **Follow-up em chamado aberto:** uma nova mensagem do mesmo remetente, dentro
+  da janela de continuidade, é anexada ao chamado aberto em vez de abrir outro
+  (ver [decisões](decisoes.md), decisão 9).
 - Testes: parsing, idempotência (memória e SQLite, inclusive após reabrir o
-  banco) e HTTP local em porta efêmera.
+  banco), HTTP local em porta efêmera e follow-up.
 
-**Pendente nesta frente:** anexar follow-up a um chamado **aberto** (hoje uma
-nova mensagem de um chamado aberto ainda abre outro chamado).
+**Pendente nesta frente:** o transporte/borda reais de entrada e saída, que
+dependem das decisões da Fase 3 (estratégia do número).
 
 **Fora de escopo (continua valendo):** sem WhatsApp real, sem Cloud API, sem
 webhook público exposto, sem credenciais.
