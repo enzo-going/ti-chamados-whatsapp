@@ -26,6 +26,18 @@ _CATEGORY_KEYWORDS: dict[Category, tuple[str, ...]] = {
         "senha", "login", "acesso", "bloqueado", "bloqueada", "email", "e-mail",
         "usuario", "conta", "permissao", "nao consigo entrar",
     ),
+    # Solicitação/empréstimo de equipamento (ex.: notebook de apoio do setor de TI).
+    # Vem ANTES de HARDWARE de propósito: "notebook" também é palavra de HARDWARE
+    # (equipamento com defeito), então usamos frases específicas de solicitação
+    # para que "preciso de um notebook" vença, enquanto "notebook nao liga" continua
+    # em HARDWARE.
+    Category.EMPRESTIMO_EQUIPAMENTO: (
+        "preciso de um notebook", "preciso de notebook", "notebook emprestado",
+        "emprestar notebook", "emprestimo de notebook", "emprestimo de equipamento",
+        "reserva de notebook", "reservar notebook", "notebook para reuniao",
+        "equipamento temporario", "pegar notebook", "notebook de apoio",
+        "notebook de suporte",
+    ),
     Category.HARDWARE: (
         "computador", "pc", "monitor", "teclado", "mouse", "nao liga",
         "desligou", "tela", "cabo", "fonte", "maquina", "notebook",
