@@ -40,6 +40,13 @@ class HelpdeskService:
     # ------------------------------------------------------------------ #
     def handle_message(self, message: Message) -> Ticket:
         """Processa uma mensagem recebida e devolve o chamado afetado."""
+        followup_ticket = self._try_followup(message)
+        if followup_ticket is not None:
+            followup_ticket.touch(f"Mensagem adicional: {message.text!r}")
+            self.repository.update(followup_ticket)
+            self.transport.send(message.sender, replies.followup(followup_ticket))
+            return followup_ticket
+
         reopened_ticket = self._try_reopen(message)
         if reopened_ticket is not None:
             reopened_ticket.touch(f"Reaberto por nova mensagem: {message.text!r}")
@@ -108,6 +115,20 @@ class HelpdeskService:
         ticket.assignee = attendant
         ticket.status = Status.ATRIBUIDO
         ticket.touch(f"Atribuído a {attendant.name}.")
+
+    def _try_followup(self, message: Message) -> Ticket | None:
+        """Chamado aberto recente do mesmo remetente, para anexar a mensagem.
+
+        Evita abrir um chamado novo quando a pessoa continua escrevendo sobre o
+        mesmo problema. Usa a mesma janela de continuidade da reabertura,
+        comparando com a última atividade do chamado (`updated_at`).
+        """
+        open_ticket = self.repository.last_open_for(message.sender)
+        if open_ticket is None:
+            return None
+        if (message.received_at - open_ticket.updated_at) <= self.reopen_window:
+            return open_ticket
+        return None
 
     def _try_reopen(self, message: Message) -> Ticket | None:
         last_closed = self.repository.last_closed_for(message.sender)

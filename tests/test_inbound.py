@@ -79,11 +79,24 @@ class TestIdempotenciaMemoria(unittest.TestCase):
         self.assertEqual(r1.ticket.id, r2.ticket.id)
         self.assertEqual(len(service.repository.all()), 1)
 
-    def test_eventos_distintos_criam_varios(self):
+    def test_eventos_de_remetentes_distintos_criam_varios(self):
         gateway, service = make_gateway()
         gateway.ingest(VALID)
-        gateway.ingest(dict(VALID, event_id="evt-2", text="a rede caiu"))
+        gateway.ingest(
+            dict(VALID, event_id="evt-2", sender="5513990000002", text="a rede caiu")
+        )
         self.assertEqual(len(service.repository.all()), 2)
+
+    def test_mesmo_remetente_em_sequencia_vira_followup(self):
+        # Eventos distintos do mesmo remetente, em sequência, são anexados ao
+        # mesmo chamado (follow-up) em vez de duplicar.
+        gateway, service = make_gateway()
+        r1 = gateway.ingest(VALID)
+        r2 = gateway.ingest(
+            dict(VALID, event_id="evt-2", text="esqueci de dizer: é no 2o andar")
+        )
+        self.assertEqual(r1.ticket.id, r2.ticket.id)
+        self.assertEqual(len(service.repository.all()), 1)
 
 
 class TestIdempotenciaSqlite(unittest.TestCase):
