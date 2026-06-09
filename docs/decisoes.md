@@ -45,6 +45,37 @@ A persistência é uma interface (`TicketRepository`) com uma implementação em
 memória. Quando fizer sentido, entra SQLite/SQLAlchemy (stack que já uso em
 outros projetos) sem alterar o serviço.
 
+> Concretizado na **Fase 1** — ver decisão 5 e o [roadmap](roadmap.md).
+
+## 5. Persistência SQLite (Fase 1 — implementada em 2026-06-08)
+
+A interface já previa SQLite (decisão 4); a Fase 1 a tornou real com
+`SqliteTicketRepository`, **sem alterar a regra de negócio** — o serviço continua
+falando apenas com o `Protocol`. Escolhas:
+
+- **`sqlite3` da biblioteca padrão, não SQLAlchemy.** O modelo é praticamente uma
+  entidade (`Ticket`); um ORM seria peso sem ganho agora. Mantém o projeto sem
+  dependências de runtime. A interface continua permitindo migrar para SQLAlchemy
+  depois, se a complexidade crescer.
+- **Write-back explícito (`update()`).** O repositório em memória "enxergava" as
+  mutações do `Ticket` por compartilhar a referência do objeto; uma persistência
+  real não. Por isso o contrato ganhou `update()` e o serviço passou a chamá-lo
+  após cada mutação (atribuição, reabertura, início, resolução, fechamento). Isso
+  completa o padrão Repository sem acoplar o domínio ao banco.
+- **`next_id()` via `MAX(id) + 1`.** Mantém o contrato (id conhecido antes do
+  insert) e é naturalmente persistente: IDs não colidem após reinício. Como
+  chamados nunca são apagados, não há risco de reuso de id.
+- **Datas em ISO 8601 (UTC); histórico em JSON.** Para timestamps UTC a ordem
+  lexicográfica coincide com a cronológica, então a busca pelo último chamado
+  fechado usa `ORDER BY closed_at` diretamente.
+
+**Deferido de propósito (não é dívida esquecida):** o estado do rodízio
+(`round-robin`) continua em memória. Persisti-lo exigiria mover estado do
+*serviço* para o *repositório* — uma decisão de design que prefiro discutir antes
+de tomar. O efeito de não persistir é apenas cosmético (após um restart a
+distribuição entre atendentes pode recomeçar do primeiro); não há perda de dados.
+Registrado no [roadmap](roadmap.md).
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

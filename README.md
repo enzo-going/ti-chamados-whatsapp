@@ -41,6 +41,9 @@ python main.py
 # Modo interativo: você digita as mensagens
 python main.py --repl
 
+# Persistindo os chamados em SQLite (sobrevive a reinícios)
+python main.py --db chamados.sqlite3
+
 # Testes
 python -m unittest discover -s tests
 ```
@@ -65,11 +68,12 @@ de ponta a ponta e trocar as bordas depois.
 helpdesk/
 ├── models.py      # Ticket, Message, Attendant, enums (Category/Priority/Status)
 ├── triage.py      # classificação por palavras-chave (categoria + prioridade)
-├── repository.py  # armazenamento (em memória; SQLite/SQLAlchemy depois)
+├── repository.py  # armazenamento: em memória (demo/testes) + SQLite (persistente)
+├── config.py      # caminho do banco via HELPDESK_DB_PATH (sem segredos no código)
 ├── transport.py   # interface de envio + FakeTransport para testes
 ├── replies.py     # mensagens automáticas (pt-BR)
 └── service.py     # orquestra o fluxo completo
-tests/             # 26 testes (unittest)
+tests/             # 38 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 ```
 
@@ -101,7 +105,7 @@ por palavra inteira (ex.: "rede**finir**" não é classificado como rede).
 ## Próximos passos (planejados)
 
 - [ ] Adaptador de transporte com a **WhatsApp Cloud API** (oficial, sem risco de ban)
-- [ ] Persistência em **SQLite/SQLAlchemy** (a interface já está pronta)
+- [x] Persistência em **SQLite** (Fase 1 concluída; SQLAlchemy fica como opção futura)
 - [ ] Painel web (Flask) para os atendentes verem e tratarem os chamados
 - [ ] Métricas: tempo de resposta, chamados por categoria, carga por atendente
 - [ ] Notificação aos atendentes quando um chamado de prioridade alta entra
@@ -111,4 +115,5 @@ por palavra inteira (ex.: "rede**finir**" não é classificado como rede).
 ## Decisões de projeto
 
 Ver [`docs/decisoes.md`](docs/decisoes.md) para o registro de decisões
-(por que projeto próprio em vez de fork, por que transporte plugável, etc.).
+(por que projeto próprio em vez de fork, por que transporte plugável, etc.) e
+[`docs/roadmap.md`](docs/roadmap.md) para o plano incremental por fases.
