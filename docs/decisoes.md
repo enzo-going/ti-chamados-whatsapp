@@ -90,6 +90,46 @@ na ordem de classificação. Assim, frases de solicitação vencem, enquanto
 esse comportamento, além de um teste que verifica que toda categoria tem rótulo
 público em `replies.py`.
 
+## 7. Entrada local e idempotente (início da Fase 2)
+
+A Fase 2 começou por uma **camada de entrada local e testável**, sem qualquer
+integração externa real (sem WhatsApp, sem Cloud API, sem webhook público).
+
+- **Payload neutro.** `helpdesk/inbound.py` define um formato JSON genérico
+  (`event_id`, `sender`, `text`, `sender_name?`, `timestamp?`), independente de
+  plataforma. `parse_payload()` valida e converte em `Message`; o `MessageGateway`
+  encaminha ao serviço. Assim, a borda real (Fase 3) só precisará traduzir o
+  formato dela para esse payload.
+- **Idempotência persistente.** Entregas "pelo menos uma vez" são comuns, então o
+  mesmo evento pode chegar repetido. Cada `event_id` processado é registrado na
+  tabela `processed_events` (SQLite); uma reentrega devolve o chamado existente,
+  sem duplicar. Sobrevive a reinícios. O schema subiu para a versão 2 (criação
+  idempotente via `IF NOT EXISTS`).
+- **Servidor HTTP local.** `helpdesk/http_app.py` (biblioteca padrão) liga apenas
+  em `127.0.0.1`, para exercitar a entrada de ponta a ponta com payloads próprios.
+  Não é exposto à internet.
+
+**Pendente nesta frente:** anexar follow-up a um chamado **aberto** (hoje uma nova
+mensagem de chamado aberto ainda abre outro) e o transporte/borda reais, que
+dependem das decisões da Fase 3.
+
+## 8. Wallboard da sala de TI (consideração de produto)
+
+Há a possibilidade (ainda não confirmada) de exibir os chamados numa TV na sala
+de TI. Direção registrada para orientar o design futuro:
+
+- **Painel interno somente leitura, com atualização automática**, em vez de
+  deixar o WhatsApp Web aberto na TV — mais profissional, controlável e seguro.
+- **Mínimo de dados, foco operacional:** número, categoria, prioridade, status,
+  responsável e tempo em aberto.
+- **Privacidade:** não expor telefone, texto completo das mensagens, nomes
+  desnecessários nem dados sensíveis. Tecnicamente, o wallboard consumiria uma
+  **projeção restrita** do `Ticket` (apenas os campos acima), não o objeto
+  inteiro — mantendo a separação entre dados internos e a tela exibida.
+
+Sem implementação por enquanto (apenas documentação). Tende a se apoiar na Fase 4
+(interface de atendentes) e/ou na Fase 5 (observabilidade).
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

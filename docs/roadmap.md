@@ -13,7 +13,7 @@ de helpdesk de TI por WhatsApp. Atualizado a cada fase.
 |---|---|---|
 | 0 | Fundação: config via env + logging | ⏳ (config já entrou na Fase 1) |
 | **1** | **Persistência SQLite** | **✅ concluída em 2026-06-08** |
-| 2 | Entrada HTTP (webhook) + idempotência + follow-up de chamado aberto | 🔜 próxima |
+| 2 | Entrada HTTP local + idempotência (follow-up de chamado aberto pendente) | 🚧 inicial entregue |
 | 3 | Integração WhatsApp Cloud API (envio + segurança do webhook) | ⛔ depende da decisão do número |
 | 4 | Interface para atendentes (painel web ou comandos) | ⛔ depende da sua escolha |
 | 5 | Observabilidade: métricas, notificação de prioridade alta, auditoria | ⏳ |
@@ -46,13 +46,24 @@ python main.py --db chamados.sqlite3         # roda; rode 2x: os IDs continuam
 **Deferido (decisão consciente):** persistência do estado de rodízio
 (`round-robin`) — ver [decisões](decisoes.md).
 
-## Fase 2 — Entrada HTTP (webhook) 🔜
+## Fase 2 — Entrada HTTP local + idempotência 🚧
 
-Próxima fase candidata. Um ponto de entrada HTTP que recebe payloads, um
-**adaptador** que converte payload → `Message`, **idempotência** por id de
-mensagem (evita chamados duplicados em reentregas) e correção do gap em que uma
-nova mensagem de um chamado **aberto** abre um chamado novo em vez de anexar.
-Continua **testável sem WhatsApp real** (payloads de exemplo).
+**Entregue (inicial, tudo local e sem integração externa):**
+
+- `helpdesk/inbound.py`: payload JSON neutro → `Message` (`parse_payload`) e
+  `MessageGateway` com **idempotência** por `event_id`.
+- `helpdesk/repository.py`: tabela `processed_events` + `seen_event()`/
+  `record_event()`; idempotência **persistente** no SQLite (schema v2).
+- `helpdesk/http_app.py`: servidor HTTP **local** (`127.0.0.1`) da biblioteca
+  padrão, para exercitar a entrada de ponta a ponta com payloads próprios.
+- Testes: parsing, idempotência (memória e SQLite, inclusive após reabrir o
+  banco) e HTTP local em porta efêmera.
+
+**Pendente nesta frente:** anexar follow-up a um chamado **aberto** (hoje uma
+nova mensagem de um chamado aberto ainda abre outro chamado).
+
+**Fora de escopo (continua valendo):** sem WhatsApp real, sem Cloud API, sem
+webhook público exposto, sem credenciais.
 
 ## Fases 3–5 — resumo
 
@@ -62,6 +73,22 @@ Continua **testável sem WhatsApp real** (payloads de exemplo).
   escolha.
 - **5. Observabilidade:** métricas, notificação de prioridade alta, logs de
   auditoria.
+
+## Requisito futuro — Wallboard da sala de TI (TV)
+
+Possibilidade em avaliação (ainda **não confirmada**): exibir os chamados numa TV
+na sala de TI. A direção pretendida é um **painel interno somente leitura, com
+atualização automática** — e **não** deixar o WhatsApp Web aberto na TV.
+
+O painel deve mostrar apenas dados **operacionais**: número do chamado, categoria,
+prioridade, status, responsável e tempo em aberto. Deve **omitir** telefone,
+texto completo das mensagens, nomes desnecessários e qualquer dado sensível —
+ou seja, uma **projeção restrita** do chamado (subconjunto seguro de campos).
+
+Tende a se apoiar na interface de atendentes (Fase 4) e/ou na observabilidade
+(Fase 5); um wallboard é uma visão somente leitura sobre os chamados abertos.
+Sem implementação por enquanto — apenas registro. Consideração de privacidade em
+[decisões](decisoes.md), decisão 8.
 
 ## Ajustes incrementais (fora de fase)
 
