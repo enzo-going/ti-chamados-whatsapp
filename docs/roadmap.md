@@ -3,12 +3,6 @@
 Documento vivo do plano incremental para transformar o protótipo em um MVP real
 de helpdesk de TI por WhatsApp. Atualizado a cada fase.
 
-> 📝 **Nota Obsidian (1ª vez usando):** este repositório está aberto como *cofre*
-> no Obsidian. Links entre notas usam `[[nome-da-nota]]` (sem `.md`) — ex.:
-> [[decisoes]] abre `docs/decisoes.md`. Passe o mouse para pré-visualizar e use
-> `Ctrl+clique` para abrir. O grafo (ícone de bolinhas na lateral) mostra as
-> conexões entre as notas. As decisões de arquitetura ficam em [[decisoes]].
-
 ## Legenda de status
 
 - ✅ concluído  ·  🔜 próximo  ·  ⏳ planejado  ·  ⛔ bloqueado por decisão sua
@@ -38,7 +32,7 @@ arquitetura e sem quebrar os testes existentes.
 - `main.py --db [ARQUIVO]`: roda a demo persistindo em SQLite; sem a flag,
   continua em memória (efêmero).
 - Contrato `TicketRepository` ganhou `update()`/`all()`; o serviço faz write-back
-  após cada mutação (ver [[decisoes]], decisão 5).
+  após cada mutação (ver [decisões](decisoes.md), decisão 5).
 - 12 testes novos (contrato, persistência entre conexões, round-trip de
   datetime/assignee/histórico, integração com o serviço). **Suíte: 38 verdes.**
 
@@ -50,7 +44,7 @@ python main.py --db chamados.sqlite3         # roda; rode 2x: os IDs continuam
 ```
 
 **Deferido (decisão consciente):** persistência do estado de rodízio
-(`round-robin`) — ver [[decisoes]].
+(`round-robin`) — ver [decisões](decisoes.md).
 
 ## Fase 2 — Entrada HTTP (webhook) 🔜
 
@@ -69,6 +63,14 @@ Continua **testável sem WhatsApp real** (payloads de exemplo).
 - **5. Observabilidade:** métricas, notificação de prioridade alta, logs de
   auditoria.
 
+## Ajustes incrementais (fora de fase)
+
+Pequenas melhorias de domínio, independentes do plano por fases:
+
+- **Categoria de triagem "empréstimo de equipamento"** (`emprestimo_equipamento`):
+  cobre a solicitação de notebook de apoio do setor de TI. Usa gatilhos por frase
+  para não conflitar com `hardware`. Detalhes em [decisões](decisoes.md), decisão 6.
+
 ## Decisões em aberto (suas)
 
 Itens que **param o avanço** das fases correspondentes até sua definição:
@@ -79,4 +81,4 @@ Itens que **param o avanço** das fases correspondentes até sua definição:
 2. **Interface dos atendentes** (Fase 4): painel web ou comandos por WhatsApp.
    _Status atual: decidir depois._
 
-Ver também: [[decisoes]] · [[README]]
+Ver também: [decisões](decisoes.md) · [README](../README.md)
