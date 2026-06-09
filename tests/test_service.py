@@ -11,10 +11,10 @@ from helpdesk.transport import FakeTransport
 def make_service(reopen_hours: int = 2) -> tuple[HelpdeskService, FakeTransport]:
     transport = FakeTransport()
     attendants = [
-        Attendant("ti1", "Enzo"),
-        Attendant("ti2", "Ana"),
-        Attendant("ti3", "Bruno"),
-        Attendant("ti4", "Carla"),
+        Attendant("ti1", "Atendente 1"),
+        Attendant("ti2", "Atendente 2"),
+        Attendant("ti3", "Atendente 3"),
+        Attendant("ti4", "Atendente 4"),
     ]
     service = HelpdeskService(
         transport=transport,

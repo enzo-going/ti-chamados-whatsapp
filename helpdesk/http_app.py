@@ -88,7 +88,7 @@ def make_server(
 
 def _build_gateway(db_path: str) -> tuple[MessageGateway, SqliteTicketRepository]:
     repo = SqliteTicketRepository(db_path)
-    attendants = [Attendant("ti1", "Enzo"), Attendant("ti2", "Ana")]
+    attendants = [Attendant("ti1", "Atendente 1"), Attendant("ti2", "Atendente 2")]
     service = HelpdeskService(
         transport=FakeTransport(), attendants=attendants, repository=repo
     )

@@ -28,7 +28,7 @@ VALID = {
 def make_gateway(repository=None):
     service = HelpdeskService(
         transport=FakeTransport(),
-        attendants=[Attendant("ti1", "Enzo"), Attendant("ti2", "Ana")],
+        attendants=[Attendant("ti1", "Atendente 1"), Attendant("ti2", "Atendente 2")],
         repository=repository,
     )
     return MessageGateway(service), service

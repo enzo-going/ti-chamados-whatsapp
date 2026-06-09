@@ -98,12 +98,12 @@ class TestContract(SqliteRepoTestCase):
     def test_update_persiste_mudancas(self):
         t = make_ticket(self.repo, "a", Status.ABERTO)
         t.status = Status.EM_ANDAMENTO
-        t.assignee = Attendant("ti1", "Enzo")
+        t.assignee = Attendant("ti1", "Atendente 1")
         t.touch("nota nova")
         self.repo.update(t)
         recarregado = self.repo.get(t.id)
         self.assertEqual(recarregado.status, Status.EM_ANDAMENTO)
-        self.assertEqual(recarregado.assignee, Attendant("ti1", "Enzo"))
+        self.assertEqual(recarregado.assignee, Attendant("ti1", "Atendente 1"))
         self.assertIn("nota nova", recarregado.history)
 
     def test_schema_version_carimbada(self):
@@ -129,7 +129,7 @@ class TestPersistencia(SqliteRepoTestCase):
             priority=Priority.ALTA,
             subject="rede caiu",
             status=Status.ATRIBUIDO,
-            assignee=Attendant("ti1", "Enzo"),
+            assignee=Attendant("ti1", "Atendente 1"),
         )
         t.touch("Aberto")
         self.repo.add(t)
@@ -146,7 +146,7 @@ class TestPersistencia(SqliteRepoTestCase):
             self.assertEqual(recarregado.category, Category.REDE)
             self.assertEqual(recarregado.priority, Priority.ALTA)
             self.assertEqual(recarregado.status, Status.ATRIBUIDO)
-            self.assertEqual(recarregado.assignee, Attendant("ti1", "Enzo"))
+            self.assertEqual(recarregado.assignee, Attendant("ti1", "Atendente 1"))
             self.assertIn("Aberto", recarregado.history)
         finally:
             repo2.close()
@@ -162,7 +162,7 @@ class TestPersistencia(SqliteRepoTestCase):
 class TestIntegracaoServico(SqliteRepoTestCase):
     def _service(self) -> tuple[HelpdeskService, FakeTransport]:
         transport = FakeTransport()
-        attendants = [Attendant("ti1", "Enzo"), Attendant("ti2", "Ana")]
+        attendants = [Attendant("ti1", "Atendente 1"), Attendant("ti2", "Atendente 2")]
         service = HelpdeskService(
             transport=transport, attendants=attendants, repository=self.repo
         )

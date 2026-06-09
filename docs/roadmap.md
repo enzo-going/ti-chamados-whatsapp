@@ -93,6 +93,18 @@ Tende a se apoiar na interface de atendentes (Fase 4) e/ou na observabilidade
 Sem implementação por enquanto — apenas registro. Consideração de privacidade em
 [decisões](decisoes.md), decisão 8.
 
+## Requisito futuro — Atendentes configuráveis
+
+O quadro de atendentes é **rotativo**, então não deve ser fixado no código (hoje
+há apenas exemplos com papéis genéricos). Requisitos previstos:
+
+- cadastro de atendentes **configurável** (fora do código);
+- estado **ativo/inativo** — apenas ativos entram no rodízio;
+- **papéis/cargos** (ex.: atendente, líder), para regras e exibição.
+
+Repositório público: **não** registrar nomes reais de funcionários nos arquivos —
+usar papéis genéricos. Sem implementação por enquanto, apenas registro.
+
 ## Ajustes incrementais (fora de fase)
 
 Pequenas melhorias de domínio, independentes do plano por fases:
