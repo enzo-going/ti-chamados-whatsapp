@@ -107,6 +107,10 @@ CREATE TABLE IF NOT EXISTS tickets (
 );
 """
 
+# Versão atual do schema. Gancho para migrações futuras: ao alterar o schema,
+# subir este número e migrar bancos com user_version menor antes de usá-los.
+_SCHEMA_VERSION = 1
+
 # Status considerados "fechados" para fins de reabertura/listagem.
 _CLOSED_STATUSES = (Status.RESOLVIDO.value, Status.FECHADO.value)
 
@@ -153,8 +157,18 @@ class SqliteTicketRepository:
     def __init__(self, db_path: str) -> None:
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
+        self._init_schema()
+
+    def _init_schema(self) -> None:
         self._conn.execute(_SCHEMA)
+        # PRAGMA não aceita parâmetro vinculado (?); interpolamos uma constante
+        # inteira controlada por nós, então não há risco de injeção.
+        self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
         self._conn.commit()
+
+    def schema_version(self) -> int:
+        """Versão do schema gravada no banco (PRAGMA user_version)."""
+        return int(self._conn.execute("PRAGMA user_version").fetchone()[0])
 
     # -- escrita ------------------------------------------------------------ #
     def add(self, ticket: Ticket) -> None:

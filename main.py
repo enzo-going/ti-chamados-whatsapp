@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 # As respostas automáticas usam emojis (✅ 🔁). No console do Windows (cp1252)
 # isso quebraria; forçamos UTF-8 na saída para a demonstração rodar em qualquer SO.
@@ -55,48 +57,55 @@ def _print_ticket(service: HelpdeskService, transport: FakeTransport, sender: st
         print(f"    resposta automática: {primeira_linha}")
 
 
-def _make_service(db_path: str | None) -> tuple[HelpdeskService, FakeTransport]:
-    """Monta o serviço com transporte de mentira e o repositório escolhido.
+@contextmanager
+def _make_service(
+    db_path: str | None,
+) -> Iterator[tuple[HelpdeskService, FakeTransport]]:
+    """Context manager: monta serviço + transporte e fecha o repositório ao sair.
 
-    Sem `--db`, usa o repositório em memória (demo efêmera). Com `--db`, persiste
-    os chamados no arquivo SQLite informado.
+    Sem `--db`, usa o repositório em memória (demo efêmera, nada a fechar). Com
+    `--db`, abre o SQLite e garante o fechamento da conexão ao final.
     """
     transport = FakeTransport()
     repository: TicketRepository | None = (
         SqliteTicketRepository(db_path) if db_path else None
     )
-    service = HelpdeskService(
-        transport=transport, attendants=ATENDENTES, repository=repository
-    )
-    return service, transport
+    try:
+        service = HelpdeskService(
+            transport=transport, attendants=ATENDENTES, repository=repository
+        )
+        yield service, transport
+    finally:
+        if isinstance(repository, SqliteTicketRepository):
+            repository.close()
 
 
 def run_roteiro(db_path: str | None = None) -> None:
-    service, transport = _make_service(db_path)
-    print("=== Simulação de chamados (transporte de mentira) ===\n")
-    for sender, texto in ROTEIRO:
-        print(f"[{sender}] {texto}")
-        service.handle_message(Message(sender=sender, text=texto))
-        _print_ticket(service, transport, sender)
-        print()
-    print(f"Total de chamados abertos: {len(service.repository.all())}")
+    with _make_service(db_path) as (service, transport):
+        print("=== Simulação de chamados (transporte de mentira) ===\n")
+        for sender, texto in ROTEIRO:
+            print(f"[{sender}] {texto}")
+            service.handle_message(Message(sender=sender, text=texto))
+            _print_ticket(service, transport, sender)
+            print()
+        print(f"Total de chamados abertos: {len(service.repository.all())}")
 
 
 def run_repl(db_path: str | None = None) -> None:
-    service, transport = _make_service(db_path)
-    print("Modo interativo. Digite uma mensagem (ou 'sair').\n")
-    while True:
-        try:
-            texto = input("funcionário> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            break
-        if texto.lower() in {"sair", "exit", "quit"}:
-            break
-        if not texto:
-            continue
-        service.handle_message(Message(sender="repl-user", text=texto))
-        _print_ticket(service, transport, "repl-user")
-        print()
+    with _make_service(db_path) as (service, transport):
+        print("Modo interativo. Digite uma mensagem (ou 'sair').\n")
+        while True:
+            try:
+                texto = input("funcionário> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if texto.lower() in {"sair", "exit", "quit"}:
+                break
+            if not texto:
+                continue
+            service.handle_message(Message(sender="repl-user", text=texto))
+            _print_ticket(service, transport, "repl-user")
+            print()
 
 
 def main() -> None:

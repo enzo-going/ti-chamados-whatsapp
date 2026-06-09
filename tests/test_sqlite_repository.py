@@ -98,6 +98,9 @@ class TestContract(SqliteRepoTestCase):
         self.assertEqual(recarregado.assignee, Attendant("ti1", "Enzo"))
         self.assertIn("nota nova", recarregado.history)
 
+    def test_schema_version_carimbada(self):
+        self.assertEqual(self.repo.schema_version(), 1)
+
 
 class TestPersistencia(SqliteRepoTestCase):
     def test_sobrevive_reabertura_do_banco(self):
