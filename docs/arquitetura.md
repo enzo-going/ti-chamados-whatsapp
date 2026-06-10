@@ -15,7 +15,7 @@ trocar as bordas (mensageria, persistência) sem reescrever a lógica.
 ```mermaid
 flowchart TB
     subgraph Bordas["Adaptadores (bordas)"]
-        IN["Entrada de mensagens<br/>(demo CLI hoje)"]
+        IN["Entrada de mensagens<br/>(demo CLI · HTTP local)"]
         FAKE["FakeTransport"]
         MEM["InMemoryTicketRepository"]
         SQL["SqliteTicketRepository"]
@@ -89,9 +89,13 @@ reabertura compara com a chegada de uma nova mensagem do mesmo remetente.
 | Domínio | `helpdesk/models.py` | Entidades e enums; objetos puros, sem I/O |
 | Domínio | `helpdesk/triage.py` | Classifica texto em categoria/prioridade e gera o assunto |
 | Domínio | `helpdesk/replies.py` | Monta as mensagens automáticas (pt-BR) |
-| Orquestração | `helpdesk/service.py` | Reabertura, criação, atribuição e resposta |
+| Orquestração | `helpdesk/service.py` | Follow-up, reabertura, criação, atribuição e resposta |
 | Porta | `helpdesk/transport.py` | `MessagingTransport` + `FakeTransport` |
 | Porta | `helpdesk/repository.py` | `TicketRepository` + implementações memória/SQLite |
+| Borda | `helpdesk/inbound.py` | Payload neutro → `Message`, com idempotência por `event_id` |
+| Borda | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`) da camada de entrada |
+| Configuração | `helpdesk/config.py` | Caminhos (banco, quadro de atendentes) via variáveis de ambiente |
+| Configuração | `helpdesk/attendants.py` | Carrega e valida o quadro de atendentes (JSON local) |
 | Composição | `main.py` | Liga adaptadores ao núcleo (demo CLI) |
 
 ## Pontos de extensão

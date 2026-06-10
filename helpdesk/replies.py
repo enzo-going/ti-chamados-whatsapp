@@ -1,6 +1,6 @@
 """Mensagens automáticas enviadas ao funcionário (pt-BR).
 
-Centralizadas aqui para serem fáceis de revisar e ajustar ao tom do CAMPS.
+Centralizadas aqui para serem fáceis de revisar e ajustar ao tom da organização.
 """
 
 from __future__ import annotations

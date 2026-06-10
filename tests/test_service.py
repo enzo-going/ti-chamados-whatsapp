@@ -4,6 +4,7 @@ import unittest
 from datetime import timedelta
 
 from helpdesk.models import Attendant, Category, Message, Priority, Status
+from helpdesk.repository import InMemoryTicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
 
@@ -157,6 +158,54 @@ class TestLifecycle(unittest.TestCase):
     def test_servico_exige_atendente(self):
         with self.assertRaises(ValueError):
             HelpdeskService(transport=FakeTransport(), attendants=[])
+
+
+class TestActiveRoster(unittest.TestCase):
+    """Rodízio com ativos/inativos: inativo não recebe novas atribuições."""
+
+    def test_rodizio_so_entre_ativos(self):
+        quadro = [
+            Attendant("ti1", "Atendente 1"),
+            Attendant("ti2", "Atendente 2", active=False),
+            Attendant("ti3", "Atendente 3"),
+        ]
+        service = HelpdeskService(transport=FakeTransport(), attendants=quadro)
+        ids = [
+            service.handle_message(Message(sender=s, text="pc nao liga")).assignee.id
+            for s in ("a", "b", "c", "d")
+        ]
+        self.assertEqual(ids, ["ti1", "ti3", "ti1", "ti3"])  # ti2 nunca entra
+
+    def test_servico_exige_atendente_ativo(self):
+        quadro = [Attendant("ti1", "Atendente 1", active=False)]
+        with self.assertRaises(ValueError):
+            HelpdeskService(transport=FakeTransport(), attendants=quadro)
+
+    def test_inativar_nao_quebra_chamado_ja_atribuido(self):
+        # Simula a troca de turno/quadro: o serviço é recriado com a mesma
+        # base de chamados, mas com o antigo responsável agora inativo.
+        repo = InMemoryTicketRepository()
+        quadro_v1 = [Attendant("ti1", "Atendente 1"), Attendant("ti2", "Atendente 2")]
+        service_v1 = HelpdeskService(
+            transport=FakeTransport(), attendants=quadro_v1, repository=repo
+        )
+        t = service_v1.handle_message(Message(sender="z", text="rede caiu"))
+        self.assertEqual(t.assignee.id, "ti1")
+
+        quadro_v2 = [
+            Attendant("ti1", "Atendente 1", active=False),
+            Attendant("ti2", "Atendente 2"),
+        ]
+        service_v2 = HelpdeskService(
+            transport=FakeTransport(), attendants=quadro_v2, repository=repo
+        )
+        # Follow-up no chamado existente: mantém o responsável original.
+        seguimento = service_v2.handle_message(Message(sender="z", text="ainda sem rede"))
+        self.assertEqual(seguimento.id, t.id)
+        self.assertEqual(seguimento.assignee.id, "ti1")
+        # Chamado novo de outra pessoa: vai para quem está ativo.
+        novo = service_v2.handle_message(Message(sender="w", text="impressora parou"))
+        self.assertEqual(novo.assignee.id, "ti2")
 
 
 if __name__ == "__main__":

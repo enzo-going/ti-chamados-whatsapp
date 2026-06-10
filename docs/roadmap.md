@@ -93,17 +93,25 @@ Tende a se apoiar na interface de atendentes (Fase 4) e/ou na observabilidade
 Sem implementação por enquanto — apenas registro. Consideração de privacidade em
 [decisões](decisoes.md), decisão 8.
 
-## Requisito futuro — Atendentes configuráveis
+## Atendentes configuráveis ✅
 
-O quadro de atendentes é **rotativo**, então não deve ser fixado no código (hoje
-há apenas exemplos com papéis genéricos). Requisitos previstos:
+O quadro de atendentes é **rotativo**, então não fica fixado no código.
+**Entregue** (ver [decisões](decisoes.md), decisão 11):
 
-- cadastro de atendentes **configurável** (fora do código);
-- estado **ativo/inativo** — apenas ativos entram no rodízio;
-- **papéis/cargos** (ex.: atendente, líder), para regras e exibição.
+- quadro **configurável** em JSON local, apontado por `HELPDESK_ATTENDANTS_PATH`
+  (`atendentes.exemplo.json` documenta o formato; o arquivo real é ignorado
+  pelo git por poder conter nomes);
+- estado **ativo/inativo** — apenas ativos entram no rodízio de novas
+  atribuições; inativar alguém não altera chamados já atribuídos;
+- **papéis/cargos** livres (ex.: supervisor, efetivo, estagiário, aprendiz,
+  suporte), com validação estrita do arquivo (campo desconhecido é erro);
+- sem configuração, a demo e os testes usam um quadro de exemplo com papéis
+  genéricos.
 
-Repositório público: **não** registrar nomes reais de funcionários nos arquivos —
-usar papéis genéricos. Sem implementação por enquanto, apenas registro.
+Mudanças no quadro são aplicadas recarregando o arquivo na inicialização
+(reinício do processo); recarga em tempo de execução fica para quando houver a
+interface de atendentes (Fase 4). Repositório público: **não** registrar nomes
+reais de funcionários nos arquivos — usar papéis genéricos.
 
 ## Ajustes incrementais (fora de fase)
 
