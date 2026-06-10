@@ -150,6 +150,22 @@ class TestRenderHtml(unittest.TestCase):
         page = render_dashboard([])
         self.assertIn("Nenhum chamado em aberto", page)
 
+    def test_resumo_de_contagem(self):
+        service = make_service()
+        service.handle_message(Message(sender="a", text="impressora sem toner"))
+        service.handle_message(
+            Message(sender="b", text="a rede caiu, ninguém consegue trabalhar")
+        )
+        page = render_dashboard(service.repository.list_open())
+        self.assertIn("2 chamados em aberto · 1 de prioridade alta", page)
+
+    def test_resumo_singular_sem_alta(self):
+        service = make_service()
+        service.handle_message(Message(sender="a", text="impressora sem toner"))
+        page = render_dashboard(service.repository.list_open())
+        self.assertIn("1 chamado em aberto", page)
+        self.assertNotIn("prioridade alta", page)
+
     def test_pagina_tem_auto_refresh(self):
         self.assertIn('http-equiv="refresh"', render_dashboard([]))
 

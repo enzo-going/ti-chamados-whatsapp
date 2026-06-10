@@ -34,7 +34,18 @@ organização, é difícil saber **o que** foi pedido, **quem** está atendendo 
 
 Sem dependências externas — Python 3.10+ puro.
 
+**Demonstração completa em um comando** (Windows/PowerShell): `.\demo.ps1` —
+cria um banco com chamados fake, sobe o servidor local e abre o painel no
+navegador. Passo a passo manual, simulação de mensagens e solução de problemas
+em [`docs/demo-local.md`](docs/demo-local.md).
+
 ```bash
+# Banco de demonstração com chamados fake (recriável à vontade)
+python -m helpdesk.demo seed --reset
+
+# Simular uma mensagem chegando (com o servidor local rodando)
+python -m helpdesk.demo send "a impressora do RH parou"
+
 # Demonstração com um roteiro de mensagens de exemplo
 python main.py
 
@@ -84,9 +95,11 @@ helpdesk/
 ├── inbound.py     # payload neutro → Message, com idempotência por event_id
 ├── http_app.py    # servidor HTTP local (127.0.0.1): entrada + painel
 ├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
+├── demo.py        # demonstração: seed de chamados fake + simulação de mensagens
 └── service.py     # orquestra o fluxo completo
-tests/             # 100 testes (unittest)
+tests/             # 113 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
+demo.ps1           # demo completa em um comando (Windows)
 ```
 
 **Por que assim:** separar a regra de negócio das integrações é o que permite
