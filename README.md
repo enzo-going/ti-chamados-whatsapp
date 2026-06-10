@@ -47,6 +47,10 @@ python main.py --db chamados.sqlite3
 # Camada de entrada via HTTP local (127.0.0.1; recebe eventos em JSON)
 python -m helpdesk.http_app --db chamados.sqlite3
 
+# Quadro de atendentes configurável (papéis + ativo/inativo, sem hardcode)
+cp atendentes.exemplo.json atendentes.json    # edite à vontade; não é versionado
+HELPDESK_ATTENDANTS_PATH=atendentes.json python main.py
+
 # Testes
 python -m unittest discover -s tests
 ```
@@ -55,7 +59,7 @@ Exemplo de saída do `python main.py`:
 
 ```
 [5513990000001] Bom dia! A rede caiu aqui no segundo andar, ninguém consegue acessar nada
-  -> Chamado #1 | rede | prioridade alta | atendente: Atendente 1
+  -> Chamado #1 | rede | prioridade alta | atendente: Atendente 1 (supervisor)
     resposta automática: ✅ Recebemos seu chamado *#1*.
 ```
 
@@ -71,12 +75,15 @@ de ponta a ponta e trocar as bordas depois.
 helpdesk/
 ├── models.py      # Ticket, Message, Attendant, enums (Category/Priority/Status)
 ├── triage.py      # classificação por palavras-chave (categoria + prioridade)
+├── attendants.py  # quadro de atendentes configurável (JSON local: papéis, ativo/inativo)
 ├── repository.py  # armazenamento: em memória (demo/testes) + SQLite (persistente)
-├── config.py      # caminho do banco via HELPDESK_DB_PATH (sem segredos no código)
+├── config.py      # caminhos via env: HELPDESK_DB_PATH, HELPDESK_ATTENDANTS_PATH
 ├── transport.py   # interface de envio + FakeTransport para testes
 ├── replies.py     # mensagens automáticas (pt-BR)
+├── inbound.py     # payload neutro → Message, com idempotência por event_id
+├── http_app.py    # servidor HTTP local (127.0.0.1) da camada de entrada
 └── service.py     # orquestra o fluxo completo
-tests/             # 38 testes (unittest)
+tests/             # 83 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 ```
 
@@ -106,10 +113,24 @@ por palavra inteira (ex.: "rede**finir**" não é classificado como rede).
 
 ---
 
+## Atendentes
+
+A equipe de atendimento é rotativa, então o quadro **não é fixado no código**:
+é um arquivo JSON local apontado por `HELPDESK_ATTENDANTS_PATH`, com `id`,
+`name`, `role` (papel/cargo livre — ex.: supervisor, efetivo, estagiário) e
+`active`. Apenas atendentes **ativos** entram no rodízio de novas atribuições;
+inativar alguém não altera os chamados já atribuídos a essa pessoa. Sem
+configuração, a demo usa um quadro de exemplo com papéis genéricos —
+[`atendentes.exemplo.json`](atendentes.exemplo.json) mostra o formato. O arquivo
+real (`atendentes.json`) fica fora do versionamento por poder conter nomes.
+
+---
+
 ## Próximos passos (planejados)
 
 - [ ] Adaptador de transporte com a **WhatsApp Cloud API** (oficial, sem risco de ban)
 - [x] Persistência em **SQLite** (Fase 1 concluída; SQLAlchemy fica como opção futura)
+- [x] **Atendentes configuráveis** (JSON local com papéis e ativo/inativo, sem hardcode)
 - [ ] Painel web (Flask) para os atendentes verem e tratarem os chamados
 - [ ] Métricas: tempo de resposta, chamados por categoria, carga por atendente
 - [ ] Notificação aos atendentes quando um chamado de prioridade alta entra

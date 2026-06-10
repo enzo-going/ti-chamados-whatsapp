@@ -41,12 +41,25 @@ class Status(str, Enum):
     FECHADO = "fechado"
 
 
+# Papel/cargo usado quando o quadro não informa um (ex.: "supervisor",
+# "efetivo", "estagiario", "aprendiz", "suporte").
+DEFAULT_ROLE = "atendente"
+
+
 @dataclass(frozen=True)
 class Attendant:
-    """Pessoa do setor de TI que recebe e resolve chamados."""
+    """Pessoa do setor de TI que recebe e resolve chamados.
+
+    ``role`` é um papel/cargo genérico e ``active`` indica se a pessoa entra no
+    rodízio de novas atribuições. O chamado guarda apenas a referência (id e
+    nome) de quem o atende; papel e atividade são propriedades do **quadro**
+    de atendentes — desativar alguém não afeta chamados já atribuídos.
+    """
 
     id: str
     name: str
+    role: str = DEFAULT_ROLE
+    active: bool = True
 
 
 @dataclass

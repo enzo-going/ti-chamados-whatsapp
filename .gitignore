@@ -18,6 +18,10 @@ env/
 # Configuração sensível
 .env
 
+# Quadro real de atendentes (local; pode conter nomes reais — não versionar).
+# O formato está em atendentes.exemplo.json, este sim versionado.
+atendentes.json
+
 # Ferramentas / caches
 .pytest_cache/
 .mypy_cache/

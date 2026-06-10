@@ -21,8 +21,8 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from helpdesk import config
+from helpdesk.attendants import load_roster
 from helpdesk.inbound import InvalidPayload, MessageGateway
-from helpdesk.models import Attendant
 from helpdesk.repository import SqliteTicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
@@ -87,8 +87,10 @@ def make_server(
 
 
 def _build_gateway(db_path: str) -> tuple[MessageGateway, SqliteTicketRepository]:
+    # Carrega o quadro antes de abrir o banco: se a configuração estiver
+    # inválida, falha sem deixar conexão pendente.
+    attendants = load_roster()
     repo = SqliteTicketRepository(db_path)
-    attendants = [Attendant("ti1", "Atendente 1"), Attendant("ti2", "Atendente 2")]
     service = HelpdeskService(
         transport=FakeTransport(), attendants=attendants, repository=repo
     )

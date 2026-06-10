@@ -31,6 +31,12 @@ class HelpdeskService:
             raise ValueError("É preciso ao menos um atendente.")
         self.transport = transport
         self.attendants = attendants
+        # O quadro completo fica em `attendants`; o rodízio usa só os ativos.
+        # O quadro é fixo por instância: mudanças (ex.: inativar alguém) são
+        # aplicadas recarregando o arquivo e recriando o serviço.
+        self._active_attendants = [a for a in attendants if a.active]
+        if not self._active_attendants:
+            raise ValueError("É preciso ao menos um atendente ativo.")
         self.repository = repository or InMemoryTicketRepository()
         self.reopen_window = reopen_window
         self._round_robin = 0
@@ -109,8 +115,13 @@ class HelpdeskService:
         return ticket
 
     def _assign(self, ticket: Ticket) -> None:
-        """Atribui o chamado a um atendente em rodízio (round-robin)."""
-        attendant = self.attendants[self._round_robin % len(self.attendants)]
+        """Atribui o chamado a um atendente **ativo**, em rodízio (round-robin).
+
+        Inativos não recebem novas atribuições; chamados já atribuídos a quem
+        saiu do quadro não são alterados (o chamado guarda o próprio responsável).
+        """
+        active = self._active_attendants
+        attendant = active[self._round_robin % len(active)]
         self._round_robin += 1
         ticket.assignee = attendant
         ticket.status = Status.ATRIBUIDO

@@ -154,14 +154,52 @@ funcionários: os atendentes de exemplo usam papéis genéricos ("Atendente 1"�
 
 Como a equipe tem rotatividade, o quadro **não deve ser fixado no código**. Fica
 previsto (futuro) um cadastro configurável de atendentes, com estado
-**ativo/inativo** (apenas ativos entram no rodízio) e **papéis/cargos**. Sem
-implementação agora — apenas a diretriz e os exemplos já genéricos.
+**ativo/inativo** (apenas ativos entram no rodízio) e **papéis/cargos**.
+
+> Implementado — ver decisão 11.
+
+## 11. Quadro de atendentes configurável (JSON local)
+
+Concretiza a decisão 10: o quadro de atendentes sai do código e vira um
+**arquivo JSON local** (`helpdesk/attendants.py`), apontado por
+`HELPDESK_ATTENDANTS_PATH` — seguindo o mesmo padrão de configuração por
+variável de ambiente do banco (`config.py`). Escolhas:
+
+- **JSON puro, sem dependências.** Uma lista de objetos com `id`, `name`,
+  `role` (opcional; padrão `"atendente"`) e `active` (opcional; padrão `true`).
+  O formato está versionado em `atendentes.exemplo.json`; o arquivo real
+  (`atendentes.json`) está no `.gitignore`, porque pode conter nomes reais e o
+  repositório é público.
+- **Papel é texto livre, não enum.** Os cargos variam com a rotatividade da
+  equipe (supervisor, efetivo, estagiário, aprendiz, suporte…); um enum exigiria
+  mudança de código a cada cargo novo, contrariando o objetivo da decisão.
+- **Validação estrita, falha alta.** Campo desconhecido é erro (um typo como
+  `"ativo"` em vez de `"active"` deixaria alguém no rodízio sem querer), assim
+  como id duplicado, quadro vazio ou tipos errados. E se há um caminho
+  configurado, o arquivo é obrigatório: erro de leitura interrompe a
+  inicialização em vez de cair silenciosamente no quadro de exemplo.
+- **Fallback genérico para demo/testes.** Sem configuração, entra um quadro de
+  exemplo com papéis genéricos ("Atendente 1"… — nunca nomes reais).
+- **Só ativos no rodízio; chamado guarda o responsável.** O serviço valida que
+  há ao menos um atendente ativo e atribui novos chamados apenas entre ativos.
+  O chamado persiste a própria referência do responsável (id + nome), então
+  inativar alguém **não altera** chamados já atribuídos — afeta somente novas
+  atribuições. Papel e atividade são propriedades do **quadro**, não do chamado.
+- **Quadro fixo por instância (sem recarga em runtime).** Mudanças no arquivo
+  são aplicadas ao reiniciar o processo — suficiente para o volume atual.
+  Recarga dinâmica fica para a interface de atendentes (Fase 4), se necessária.
+
+**Continua deferido:** o ponteiro do rodízio (round-robin) segue em memória,
+como na decisão 5 — após um reinício a distribuição recomeça do primeiro ativo.
+Persisti-lo continua sendo uma decisão futura, agora com um motivo a mais para
+ser revisitada junto da Fase 4 (a ordem do rodízio passa a depender do arquivo
+de quadro).
 
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)
 
-- Quais categorias fazem mais sentido no dia a dia do CAMPS?
+- Quais categorias fazem mais sentido no dia a dia do setor?
 - A equipe tem 4 atendentes fixos? O rodízio simples basta ou precisa considerar
   quem está disponível?
 - Faz sentido notificar os atendentes (ex.: por outro canal) quando entra um

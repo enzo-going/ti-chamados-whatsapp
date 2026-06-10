@@ -21,20 +21,11 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from helpdesk import config
-from helpdesk.models import Attendant, Message
+from helpdesk.attendants import InvalidRoster, load_roster
+from helpdesk.models import Message
 from helpdesk.repository import SqliteTicketRepository, TicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
-
-# Atendentes de exemplo, com papéis genéricos. O quadro real é rotativo e não
-# deve ser fixado no código — ver roadmap (atendentes configuráveis, com
-# ativos/inativos e papéis).
-ATENDENTES = [
-    Attendant("ti1", "Atendente 1"),
-    Attendant("ti2", "Atendente 2"),
-    Attendant("ti3", "Atendente 3"),
-    Attendant("ti4", "Atendente 4"),
-]
 
 ROTEIRO = [
     ("5513990000001", "Bom dia! A rede caiu aqui no segundo andar, ninguém consegue acessar nada"),
@@ -51,7 +42,7 @@ def _print_ticket(service: HelpdeskService, transport: FakeTransport, sender: st
     if not todos:
         return
     ticket = todos[-1]
-    nome = ticket.assignee.name if ticket.assignee else "—"
+    nome = f"{ticket.assignee.name} ({ticket.assignee.role})" if ticket.assignee else "—"
     print(f"  -> Chamado #{ticket.id} | {ticket.category.value} | prioridade {ticket.priority.value} | atendente: {nome}")
     print(f"    assunto: {ticket.subject}")
     resposta = transport.last_to(sender)
@@ -68,6 +59,9 @@ def _make_service(
 
     Sem `--db`, usa o repositório em memória (demo efêmera, nada a fechar). Com
     `--db`, abre o SQLite e garante o fechamento da conexão ao final.
+
+    O quadro de atendentes vem de `load_roster()`: arquivo JSON apontado por
+    HELPDESK_ATTENDANTS_PATH ou, sem configuração, exemplos com papéis genéricos.
     """
     transport = FakeTransport()
     repository: TicketRepository | None = (
@@ -75,7 +69,7 @@ def _make_service(
     )
     try:
         service = HelpdeskService(
-            transport=transport, attendants=ATENDENTES, repository=repository
+            transport=transport, attendants=load_roster(), repository=repository
         )
         yield service, transport
     finally:
@@ -126,10 +120,14 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
-    if args.repl:
-        run_repl(args.db)
-    else:
-        run_roteiro(args.db)
+    try:
+        if args.repl:
+            run_repl(args.db)
+        else:
+            run_roteiro(args.db)
+    except (InvalidRoster, FileNotFoundError) as exc:
+        print(f"Erro no quadro de atendentes: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

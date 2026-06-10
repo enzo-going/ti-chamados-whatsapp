@@ -1,0 +1,6 @@
+[
+    {"id": "ti1", "name": "Atendente 1", "role": "supervisor"},
+    {"id": "ti2", "name": "Atendente 2", "role": "efetivo"},
+    {"id": "ti3", "name": "Atendente 3", "role": "estagiario"},
+    {"id": "ti4", "name": "Atendente 4", "role": "suporte", "active": false}
+]
