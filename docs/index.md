@@ -12,6 +12,8 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 - [Arquitetura](arquitetura.md) — visão de componentes, fluxo e ciclo de vida (com diagramas).
 - [Roadmap](roadmap.md) — plano incremental por fases e decisões em aberto.
 - [Registro de decisões](decisoes.md) — decisões de arquitetura (ADR).
+- [Demonstração local](demo-local.md) — passo a passo para rodar e testar na máquina.
+- [Roteiro de demonstração](roteiro-demo.md) — guia curto de apresentação (~10 min).
 - [Visão geral (README)](../README.md) — descrição e instruções de uso.
 
 ## Mapa do código
@@ -28,6 +30,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/inbound.py` | Camada de entrada: payload neutro → `Message`, com idempotência |
 | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + página HTML |
+| `helpdesk/demo.py` | Demonstração: seed de chamados fake + simulação de mensagens |
 | `helpdesk/config.py` | Caminhos (banco, quadro de atendentes) via variáveis de ambiente |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
 | `tests/` | Suíte de testes (unittest) |

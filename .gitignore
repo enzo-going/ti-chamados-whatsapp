@@ -11,8 +11,9 @@ dist/
 venv/
 env/
 
-# Banco de dados local (quando adicionar SQLite)
+# Bancos de dados locais (inclui o demo.sqlite3 da demonstração)
 *.sqlite
+*.sqlite3
 *.db
 
 # Configuração sensível

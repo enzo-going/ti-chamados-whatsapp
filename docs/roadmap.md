@@ -121,6 +121,10 @@ Pequenas melhorias de domínio, independentes do plano por fases:
 - **Categoria de triagem "empréstimo de equipamento"** (`emprestimo_equipamento`):
   cobre a solicitação de notebook de apoio do setor de TI. Usa gatilhos por frase
   para não conflitar com `hardware`. Detalhes em [decisões](decisoes.md), decisão 6.
+- **Modo de demonstração local** (`helpdesk/demo.py` + `demo.ps1`): seed de
+  chamados fake pelo fluxo real do serviço e simulação de mensagens via
+  `POST /inbound`. Passo a passo em [demo-local](demo-local.md); roteiro de
+  apresentação em [roteiro-demo](roteiro-demo.md).
 
 ## Decisões em aberto (suas)
 

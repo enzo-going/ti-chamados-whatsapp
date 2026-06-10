@@ -115,6 +115,7 @@ _PAGE = """<!DOCTYPE html>
   tr.alta .prio {{ color: #f28b82; }}
   tr.media .prio {{ color: #fdd663; }}
   tr.baixa .prio {{ color: #81c995; }}
+  .resumo {{ color: #9aa0a6; font-size: 1.05rem; margin: 0 0 1rem; }}
   .vazio {{ color: #9aa0a6; font-size: 1.2rem; padding: 2rem 0; }}
   .meta {{ color: #9aa0a6; font-size: .85rem; margin-top: 1.5rem; }}
 </style>
@@ -151,12 +152,24 @@ def _row_html(row: PanelRow) -> str:
     return f'<tr class="{css}">{cells}</tr>'
 
 
+def _summary(rows: list[PanelRow]) -> str:
+    """Linha de resumo acima da tabela: total em aberto e quantos são alta."""
+    plural = "s" if len(rows) != 1 else ""
+    text = f"{len(rows)} chamado{plural} em aberto"
+    altas = sum(1 for r in rows if r.priority == "alta")
+    if altas:
+        text += f" · {altas} de prioridade alta"
+    return f'<p class="resumo">{text}</p>'
+
+
 def render_dashboard(tickets: list[Ticket], now: datetime | None = None) -> str:
     """Página HTML completa do painel para os chamados em aberto."""
     now = now or datetime.now(timezone.utc)
     rows = panel_rows(tickets, now)
     if rows:
-        content = _TABLE.format(rows="\n".join(_row_html(r) for r in rows))
+        content = _summary(rows) + _TABLE.format(
+            rows="\n".join(_row_html(r) for r in rows)
+        )
     else:
         content = '<p class="vazio">Nenhum chamado em aberto.</p>'
     return _PAGE.format(
