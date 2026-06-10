@@ -26,7 +26,8 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/replies.py` | Mensagens automáticas (pt-BR) |
 | `helpdesk/service.py` | Orquestra o fluxo completo |
 | `helpdesk/inbound.py` | Camada de entrada: payload neutro → `Message`, com idempotência |
-| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`) para exercitar a entrada |
+| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
+| `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + página HTML |
 | `helpdesk/config.py` | Caminhos (banco, quadro de atendentes) via variáveis de ambiente |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
 | `tests/` | Suíte de testes (unittest) |
@@ -38,3 +39,5 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
   (payload neutro, idempotência, follow-up); bordas reais aguardam a Fase 3.
 - **Atendentes configuráveis:** entregue — quadro em JSON local com papéis e
   ativo/inativo (ver [decisões](decisoes.md), decisão 11).
+- **Painel local somente leitura:** entregue — `/dashboard` com projeção
+  restrita dos chamados em aberto, base do futuro wallboard (decisão 12).

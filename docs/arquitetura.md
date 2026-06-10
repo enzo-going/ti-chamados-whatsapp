@@ -93,7 +93,8 @@ reabertura compara com a chegada de uma nova mensagem do mesmo remetente.
 | Porta | `helpdesk/transport.py` | `MessagingTransport` + `FakeTransport` |
 | Porta | `helpdesk/repository.py` | `TicketRepository` + implementações memória/SQLite |
 | Borda | `helpdesk/inbound.py` | Payload neutro → `Message`, com idempotência por `event_id` |
-| Borda | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`) da camada de entrada |
+| Borda | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
+| Borda | `helpdesk/dashboard.py` | Projeção restrita + página HTML do painel somente leitura |
 | Configuração | `helpdesk/config.py` | Caminhos (banco, quadro de atendentes) via variáveis de ambiente |
 | Configuração | `helpdesk/attendants.py` | Carrega e valida o quadro de atendentes (JSON local) |
 | Composição | `main.py` | Liga adaptadores ao núcleo (demo CLI) |

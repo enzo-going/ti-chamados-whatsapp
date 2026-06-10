@@ -24,6 +24,16 @@ _PRIORITY_LABEL = {
 }
 
 
+def category_label(category: Category) -> str:
+    """Rótulo público (pt-BR) de uma categoria — usado em respostas e no painel."""
+    return _CATEGORY_LABEL[category]
+
+
+def priority_label(priority: Priority) -> str:
+    """Rótulo público (pt-BR) de uma prioridade."""
+    return _PRIORITY_LABEL[priority]
+
+
 def acknowledgement(ticket: Ticket) -> str:
     """Confirma a abertura do chamado para o funcionário."""
     categoria = _CATEGORY_LABEL[ticket.category]

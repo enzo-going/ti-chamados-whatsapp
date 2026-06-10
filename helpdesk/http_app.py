@@ -4,9 +4,16 @@ Liga apenas em ``127.0.0.1`` por padrão. **Não** é um webhook público nem se
 conecta a qualquer plataforma externa — serve para testar, de ponta a ponta e
 com payloads próprios, a conversão de eventos em chamados e a idempotência.
 
+Também serve o **painel local somente leitura** em ``/dashboard`` (HTML), uma
+visão restrita dos chamados em aberto — ver `helpdesk/dashboard.py`. É um
+painel de desenvolvimento, não de produção.
+
 Uso::
 
     python -m helpdesk.http_app --db chamados.sqlite3 --port 8000
+
+    # painel somente leitura no navegador:
+    #   http://127.0.0.1:8000/dashboard
 
     # em outra janela, envie um evento (exemplo com curl):
     #   curl -X POST http://127.0.0.1:8000/inbound \
@@ -22,21 +29,31 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from helpdesk import config
 from helpdesk.attendants import load_roster
+from helpdesk.dashboard import render_dashboard
 from helpdesk.inbound import InvalidPayload, MessageGateway
-from helpdesk.repository import SqliteTicketRepository
+from helpdesk.repository import SqliteTicketRepository, TicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
 
 _INBOUND_PATH = "/inbound"
+_DASHBOARD_PATH = "/dashboard"
 
 
-def make_handler(gateway: MessageGateway) -> type[BaseHTTPRequestHandler]:
-    """Cria o handler HTTP ligado a um ``MessageGateway``."""
+def make_handler(
+    gateway: MessageGateway, repository: TicketRepository
+) -> type[BaseHTTPRequestHandler]:
+    """Cria o handler HTTP ligado a um ``MessageGateway`` e ao repositório.
+
+    O repositório entra separado porque o painel é somente leitura: ele lista
+    os chamados em aberto sem passar pelo fluxo de entrada.
+    """
 
     class _Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == "/health":
                 self._json(200, {"status": "ok"})
+            elif self.path == _DASHBOARD_PATH:
+                self._html(200, render_dashboard(repository.list_open()))
             else:
                 self._json(404, {"error": "rota não encontrada"})
 
@@ -66,9 +83,15 @@ def make_handler(gateway: MessageGateway) -> type[BaseHTTPRequestHandler]:
             )
 
         def _json(self, status: int, body: dict) -> None:
-            data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+            self._respond(status, "application/json; charset=utf-8",
+                          json.dumps(body, ensure_ascii=False).encode("utf-8"))
+
+        def _html(self, status: int, body: str) -> None:
+            self._respond(status, "text/html; charset=utf-8", body.encode("utf-8"))
+
+        def _respond(self, status: int, content_type: str, data: bytes) -> None:
             self.send_response(status)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
@@ -80,10 +103,13 @@ def make_handler(gateway: MessageGateway) -> type[BaseHTTPRequestHandler]:
 
 
 def make_server(
-    gateway: MessageGateway, host: str = "127.0.0.1", port: int = 8000
+    gateway: MessageGateway,
+    repository: TicketRepository,
+    host: str = "127.0.0.1",
+    port: int = 8000,
 ) -> HTTPServer:
     """Cria o servidor HTTP local. ``port=0`` escolhe uma porta livre (testes)."""
-    return HTTPServer((host, port), make_handler(gateway))
+    return HTTPServer((host, port), make_handler(gateway, repository))
 
 
 def _build_gateway(db_path: str) -> tuple[MessageGateway, SqliteTicketRepository]:
@@ -107,9 +133,10 @@ def main() -> None:
     args = parser.parse_args()
 
     gateway, repo = _build_gateway(args.db)
-    server = make_server(gateway, args.host, args.port)
+    server = make_server(gateway, repo, args.host, args.port)
     print(
         f"Camada de entrada ouvindo em http://{args.host}:{args.port}{_INBOUND_PATH} "
+        f"· painel em http://{args.host}:{args.port}{_DASHBOARD_PATH} "
         "(Ctrl+C para sair)"
     )
     try:
