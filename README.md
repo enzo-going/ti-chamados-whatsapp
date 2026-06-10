@@ -45,6 +45,7 @@ python main.py --repl
 python main.py --db chamados.sqlite3
 
 # Camada de entrada via HTTP local (127.0.0.1; recebe eventos em JSON)
+# e painel somente leitura em http://127.0.0.1:8000/dashboard
 python -m helpdesk.http_app --db chamados.sqlite3
 
 # Quadro de atendentes configurável (papéis + ativo/inativo, sem hardcode)
@@ -81,9 +82,10 @@ helpdesk/
 ├── transport.py   # interface de envio + FakeTransport para testes
 ├── replies.py     # mensagens automáticas (pt-BR)
 ├── inbound.py     # payload neutro → Message, com idempotência por event_id
-├── http_app.py    # servidor HTTP local (127.0.0.1) da camada de entrada
+├── http_app.py    # servidor HTTP local (127.0.0.1): entrada + painel
+├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
 └── service.py     # orquestra o fluxo completo
-tests/             # 83 testes (unittest)
+tests/             # 100 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 ```
 
@@ -126,12 +128,28 @@ real (`atendentes.json`) fica fora do versionamento por poder conter nomes.
 
 ---
 
+## Painel local somente leitura (wallboard)
+
+O servidor HTTP local serve em `/dashboard` uma página HTML simples com os
+chamados em aberto — pensada como base para um futuro **wallboard** (TV na sala
+de TI). A página recebe apenas uma **projeção restrita** do chamado: número,
+categoria, prioridade, status, responsável, horário de abertura e tempo em
+aberto. Telefone, nome do solicitante e conteúdo das mensagens **não passam
+pela projeção** (há teste garantindo isso). Ordena por prioridade (alta
+primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
+
+> É um painel **local de desenvolvimento** (`127.0.0.1`, sem autenticação),
+> não uma interface de produção.
+
+---
+
 ## Próximos passos (planejados)
 
 - [ ] Adaptador de transporte com a **WhatsApp Cloud API** (oficial, sem risco de ban)
 - [x] Persistência em **SQLite** (Fase 1 concluída; SQLAlchemy fica como opção futura)
 - [x] **Atendentes configuráveis** (JSON local com papéis e ativo/inativo, sem hardcode)
-- [ ] Painel web (Flask) para os atendentes verem e tratarem os chamados
+- [x] **Painel local somente leitura** (`/dashboard`; projeção restrita, base do wallboard)
+- [ ] Painel web (Flask) para os atendentes verem e **tratarem** os chamados
 - [ ] Métricas: tempo de resposta, chamados por categoria, carga por atendente
 - [ ] Notificação aos atendentes quando um chamado de prioridade alta entra
 

@@ -195,6 +195,34 @@ Persisti-lo continua sendo uma decisão futura, agora com um motivo a mais para
 ser revisitada junto da Fase 4 (a ordem do rodízio passa a depender do arquivo
 de quadro).
 
+## 12. Painel local somente leitura (base do wallboard)
+
+Primeira concretização da direção registrada na decisão 8: uma página HTML em
+``/dashboard``, servida pelo servidor HTTP local já existente
+(`helpdesk/http_app.py`), listando os chamados em aberto. Escolhas:
+
+- **Projeção restrita como código, não como convenção.** `helpdesk/dashboard.py`
+  define um `PanelRow` (dataclass congelada) com exatamente os campos
+  operacionais — número, categoria, prioridade, status, responsável, horário de
+  abertura e tempo em aberto. Telefone, nome do solicitante, assunto e
+  histórico **não passam pela projeção**, então não têm como chegar à página.
+  Um teste fixa a lista de campos: adicionar dado novo ao painel exige mudança
+  consciente no contrato.
+- **Aproveita o servidor existente, stdlib pura.** Nada de framework ou
+  dependência nova: rota `GET /dashboard` no `http.server` local, HTML gerado
+  por template de string com `html.escape` em todo valor dinâmico (há teste de
+  escape). Continua ligado apenas a `127.0.0.1`.
+- **Sem autenticação, por ser local de desenvolvimento.** Documentado como
+  painel de desenvolvimento, não de produção. Quando o wallboard real (TV)
+  for confirmado, acesso e exposição serão revisitados junto das Fases 4/5.
+- **Atualização simples.** `<meta http-equiv="refresh">` a cada 15s — suficiente
+  para um painel de parede, sem JavaScript nem polling sofisticado.
+- **Ordenação operacional.** Prioridade alta primeiro; dentro da mesma
+  prioridade, o mais antigo primeiro (quem espera há mais tempo aparece no topo).
+
+O responsável é exibido só pelo **nome** (sem papel/cargo), seguindo o princípio
+de mínimo de dados da decisão 8; o papel pode entrar depois se houver uso real.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

@@ -128,8 +128,9 @@ class TestIdempotenciaSqlite(unittest.TestCase):
 
 class TestHttpLocal(unittest.TestCase):
     def setUp(self):
-        gateway, _ = make_gateway(InMemoryTicketRepository())
-        self.server = make_server(gateway, host="127.0.0.1", port=0)
+        repo = InMemoryTicketRepository()
+        gateway, _ = make_gateway(repo)
+        self.server = make_server(gateway, repo, host="127.0.0.1", port=0)
         self.port = self.server.server_address[1]
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()

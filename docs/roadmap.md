@@ -77,21 +77,22 @@ webhook público exposto, sem credenciais.
 - **5. Observabilidade:** métricas, notificação de prioridade alta, logs de
   auditoria.
 
-## Requisito futuro — Wallboard da sala de TI (TV)
+## Wallboard da sala de TI (TV) — base entregue 🚧
 
 Possibilidade em avaliação (ainda **não confirmada**): exibir os chamados numa TV
-na sala de TI. A direção pretendida é um **painel interno somente leitura, com
-atualização automática** — e **não** deixar o WhatsApp Web aberto na TV.
+na sala de TI. A direção é um **painel interno somente leitura, com atualização
+automática** — e **não** deixar o WhatsApp Web aberto na TV.
 
-O painel deve mostrar apenas dados **operacionais**: número do chamado, categoria,
-prioridade, status, responsável e tempo em aberto. Deve **omitir** telefone,
-texto completo das mensagens, nomes desnecessários e qualquer dado sensível —
-ou seja, uma **projeção restrita** do chamado (subconjunto seguro de campos).
+**Base entregue:** painel local somente leitura em ``/dashboard`` no servidor
+HTTP local (`127.0.0.1`), com a **projeção restrita** do chamado (número,
+categoria, prioridade, status, responsável, abertura e tempo em aberto) e
+auto-refresh leve. Telefone, texto das mensagens e nome do solicitante ficam
+fora da projeção, com teste garantindo. Ver [decisões](decisoes.md), decisões
+8 e 12. É um painel de **desenvolvimento**, não de produção.
 
-Tende a se apoiar na interface de atendentes (Fase 4) e/ou na observabilidade
-(Fase 5); um wallboard é uma visão somente leitura sobre os chamados abertos.
-Sem implementação por enquanto — apenas registro. Consideração de privacidade em
-[decisões](decisoes.md), decisão 8.
+**Pendente para a TV real:** confirmação do requisito, decisão de
+acesso/exposição na rede interna e integração com as Fases 4 (interface de
+atendentes) e 5 (observabilidade).
 
 ## Atendentes configuráveis ✅
 
