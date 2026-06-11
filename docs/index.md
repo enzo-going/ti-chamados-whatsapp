@@ -30,7 +30,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/inbound.py` | Camada de entrada: payload neutro → `Message`, com idempotência |
 | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + página HTML |
-| `helpdesk/demo.py` | Demonstração: seed de chamados fake + simulação de mensagens |
+| `helpdesk/demo.py` | Demonstração: seed fake, simulação de mensagens e checagem automática (`check`) |
 | `helpdesk/config.py` | Caminhos (banco, quadro de atendentes) via variáveis de ambiente |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
 | `tests/` | Suíte de testes (unittest) |

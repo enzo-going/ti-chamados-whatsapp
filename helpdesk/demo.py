@@ -4,6 +4,7 @@ Tudo aqui é **fake e local**: telefones fictícios, textos genéricos, nenhum
 contato com WhatsApp ou serviço externo. Permite subir uma demonstração
 completa (banco + servidor + painel) em poucos comandos::
 
+    python -m helpdesk.demo check                   # pré-voo: o fluxo todo funciona?
     python -m helpdesk.demo seed --reset            # cria demo.sqlite3 com chamados fake
     python -m helpdesk.http_app --db demo.sqlite3   # sobe o servidor local
     #   painel: http://127.0.0.1:8000/dashboard
@@ -22,6 +23,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
+import threading
 import urllib.error
 import urllib.request
 
@@ -37,6 +40,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from helpdesk.attendants import load_roster
+from helpdesk.http_app import make_server
+from helpdesk.inbound import MessageGateway
 from helpdesk.models import Message, Ticket
 from helpdesk.repository import SqliteTicketRepository, TicketRepository
 from helpdesk.service import HelpdeskService
@@ -184,8 +189,245 @@ def send_message(
 
 
 # --------------------------------------------------------------------------- #
+# Checagem automática (pré-voo da demonstração)
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class CheckStep:
+    """Um passo da checagem: o que foi verificado e como terminou."""
+
+    label: str
+    ok: bool
+    detail: str = ""
+
+
+def run_check() -> list[CheckStep]:
+    """Percorre o fluxo completo da demonstração em ambiente descartável.
+
+    Sobe um servidor próprio em porta efêmera com banco temporário e exercita
+    tudo o que a demonstração mostra: seed pelo fluxo real, mensagem nova,
+    follow-up, idempotência e painel. Não toca no ``demo.sqlite3`` nem exige
+    servidor rodando. A checagem para no primeiro passo que falhar (os
+    seguintes dependeriam dele); devolve a lista de passos com os resultados.
+    """
+    steps: list[CheckStep] = []
+
+    versao = ".".join(str(n) for n in sys.version_info[:3])
+    if sys.version_info < (3, 10):
+        steps.append(
+            CheckStep(
+                "Python 3.10+",
+                False,
+                f"versão encontrada: {versao} — instale o Python 3.10 ou mais novo",
+            )
+        )
+        return steps
+    steps.append(CheckStep("Python 3.10+", True, f"versão {versao}"))
+
+    # O quadro vem da mesma configuração que a demo usaria (arquivo apontado
+    # por HELPDESK_ATTENDANTS_PATH ou o exemplo embutido) — erro aqui é erro
+    # que apareceria ao vivo.
+    try:
+        roster = load_roster()
+        ativos = sum(1 for attendant in roster if attendant.active)
+        if ativos == 0:
+            raise RuntimeError(
+                "nenhum atendente ativo — o rodízio precisa de ao menos um"
+            )
+    except Exception as exc:
+        steps.append(CheckStep("quadro de atendentes", False, str(exc)))
+        return steps
+    steps.append(
+        CheckStep(
+            "quadro de atendentes",
+            True,
+            f"{len(roster)} no quadro, {ativos} ativo(s) no rodízio",
+        )
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            repo = SqliteTicketRepository(
+                str(Path(tmpdir) / "checagem.sqlite3"), allow_cross_thread=True
+            )
+        except Exception as exc:
+            steps.append(CheckStep("banco temporário (SQLite)", False, str(exc)))
+            return steps
+        server = None
+        thread = None
+        try:
+            try:
+                tickets = seed_demo(repo)
+                abertos = len(repo.list_open())
+            except Exception as exc:
+                steps.append(CheckStep("banco temporário (SQLite)", False, str(exc)))
+                return steps
+            steps.append(
+                CheckStep(
+                    "banco temporário (SQLite)",
+                    True,
+                    f"{len(tickets)} chamados fake pelo fluxo real, {abertos} em aberto",
+                )
+            )
+
+            try:
+                service = HelpdeskService(
+                    transport=FakeTransport(), attendants=roster, repository=repo
+                )
+                server = make_server(MessageGateway(service), repo, port=0)
+                base_url = f"http://127.0.0.1:{server.server_address[1]}"
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                with urllib.request.urlopen(f"{base_url}/health", timeout=5) as resp:
+                    health = json.loads(resp.read())
+                if health.get("status") != "ok":
+                    raise RuntimeError(f"resposta inesperada do /health: {health}")
+            except Exception as exc:
+                steps.append(
+                    CheckStep("servidor local em porta efêmera", False, str(exc))
+                )
+                return steps
+            steps.append(
+                CheckStep("servidor local em porta efêmera", True, base_url)
+            )
+
+            # Remetentes próprios da checagem, fora dos usados pelo seed.
+            sender_novo = "5513990000071"
+            try:
+                novo = send_message(
+                    "a impressora do financeiro parou",
+                    sender=sender_novo,
+                    base_url=base_url,
+                )
+                if novo.get("duplicate"):
+                    raise RuntimeError("a primeira mensagem veio marcada como repetida")
+                if novo.get("category") != "impressora":
+                    raise RuntimeError(
+                        f"triagem inesperada: {novo.get('category')!r} "
+                        "(esperado: 'impressora')"
+                    )
+            except Exception as exc:
+                steps.append(CheckStep("mensagem nova vira chamado", False, str(exc)))
+                return steps
+            steps.append(
+                CheckStep(
+                    "mensagem nova vira chamado",
+                    True,
+                    f"chamado #{novo['ticket_id']}, categoria impressora",
+                )
+            )
+
+            try:
+                seguida = send_message(
+                    "continua sem imprimir", sender=sender_novo, base_url=base_url
+                )
+                if seguida["ticket_id"] != novo["ticket_id"]:
+                    raise RuntimeError(
+                        f"abriu o chamado #{seguida['ticket_id']} em vez de cair "
+                        f"no #{novo['ticket_id']}"
+                    )
+                if seguida.get("duplicate"):
+                    raise RuntimeError("follow-up veio marcado como evento repetido")
+            except Exception as exc:
+                steps.append(
+                    CheckStep("follow-up cai no mesmo chamado", False, str(exc))
+                )
+                return steps
+            steps.append(
+                CheckStep(
+                    "follow-up cai no mesmo chamado",
+                    True,
+                    f"segunda mensagem anexada ao chamado #{novo['ticket_id']}",
+                )
+            )
+
+            try:
+                primeiro = send_message(
+                    "teste de reentrega",
+                    sender="5513990000072",
+                    base_url=base_url,
+                    event_id="check-evt-1",
+                )
+                repetido = send_message(
+                    "teste de reentrega",
+                    sender="5513990000072",
+                    base_url=base_url,
+                    event_id="check-evt-1",
+                )
+                if primeiro.get("duplicate") or not repetido.get("duplicate"):
+                    raise RuntimeError(
+                        "esperado 'duplicate' apenas na reentrega; veio "
+                        f"{primeiro} e depois {repetido}"
+                    )
+                if repetido["ticket_id"] != primeiro["ticket_id"]:
+                    raise RuntimeError("a reentrega devolveu um chamado diferente")
+            except Exception as exc:
+                steps.append(CheckStep("idempotência na reentrega", False, str(exc)))
+                return steps
+            steps.append(
+                CheckStep(
+                    "idempotência na reentrega",
+                    True,
+                    "mesmo evento enviado duas vezes não duplicou nada",
+                )
+            )
+
+            try:
+                with urllib.request.urlopen(
+                    f"{base_url}/dashboard", timeout=5
+                ) as resp:
+                    page = resp.read().decode("utf-8")
+                if f"<td>#{novo['ticket_id']}</td>" not in page:
+                    raise RuntimeError(
+                        f"o chamado #{novo['ticket_id']} não apareceu no painel"
+                    )
+                if sender_novo in page:
+                    raise RuntimeError(
+                        "telefone do remetente apareceu no HTML do painel"
+                    )
+            except Exception as exc:
+                steps.append(CheckStep("painel /dashboard", False, str(exc)))
+                return steps
+            steps.append(
+                CheckStep(
+                    "painel /dashboard",
+                    True,
+                    "chamados em aberto listados, sem telefone no HTML",
+                )
+            )
+        finally:
+            if server is not None:
+                if thread is not None:
+                    server.shutdown()
+                server.server_close()
+            if thread is not None:
+                thread.join(timeout=5)
+            repo.close()
+    return steps
+
+
+# --------------------------------------------------------------------------- #
 # Linha de comando
 # --------------------------------------------------------------------------- #
+
+
+def _cmd_check(args: argparse.Namespace) -> None:
+    print("Checagem da demonstração local (o demo.sqlite3 não é tocado):\n")
+    steps = run_check()
+    for step in steps:
+        marcador = "[ok]" if step.ok else "[FALHOU]"
+        detalhe = f" — {step.detail}" if step.detail else ""
+        print(f"  {marcador:<8} {step.label}{detalhe}")
+    print()
+    falhas = [step for step in steps if not step.ok]
+    if falhas:
+        sys.exit(
+            f"{len(falhas)} passo falhou. Corrija o item marcado acima e rode de "
+            "novo: python -m helpdesk.demo check"
+        )
+    print(f"Tudo certo ({len(steps)}/{len(steps)} passos): a demonstração está pronta.")
+    print("Para apresentar: .\\demo.ps1   (passo a passo: docs/demo-local.md)")
 
 
 def _cmd_seed(args: argparse.Namespace) -> None:
@@ -258,6 +500,13 @@ def main() -> None:
         description="Demonstração local do helpdesk (dados fake, sem WhatsApp real)."
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    check = sub.add_parser(
+        "check",
+        help="pré-voo: percorre o fluxo completo em ambiente descartável e "
+        "aponta o que falhar",
+    )
+    check.set_defaults(func=_cmd_check)
 
     seed = sub.add_parser("seed", help="cria o banco de demonstração com chamados fake")
     seed.add_argument("--db", default=DEFAULT_DEMO_DB, help="padrão: %(default)s")

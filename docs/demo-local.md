@@ -25,6 +25,20 @@ servidor. Porta ocupada? `.\demo.ps1 -Port 8010`.
 > Se o PowerShell bloquear o script por política de execução:
 > `powershell -ExecutionPolicy Bypass -File .\demo.ps1`
 
+## Checagem automática (antes de apresentar)
+
+Para confirmar que está tudo pronto — Python, quadro de atendentes, banco,
+servidor, triagem, follow-up, idempotência e painel — sem subir nada na mão:
+
+```powershell
+python -m helpdesk.demo check     # ou: .\demo.ps1 -Check
+```
+
+A checagem percorre o fluxo completo em um ambiente descartável (banco
+temporário + porta efêmera): não toca no `demo.sqlite3` nem precisa de
+servidor rodando. Termina em `Tudo certo (8/8 passos)` — ou aponta exatamente
+o passo que falhou, com o motivo. Ideal minutos antes de uma apresentação.
+
 ## Passo a passo manual (os mesmos 3 comandos do script)
 
 ```powershell

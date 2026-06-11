@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import socket
 import subprocess
 import sys
@@ -12,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from helpdesk.dashboard import render_dashboard
-from helpdesk.demo import seed_demo, send_message
+from helpdesk.demo import run_check, seed_demo, send_message
 from helpdesk.http_app import make_server
 from helpdesk.inbound import MessageGateway
 from helpdesk.models import Attendant, Priority
@@ -193,6 +194,59 @@ class TestServidorComSqliteEmThreads(unittest.TestCase):
                 server.server_close()
                 thread.join(timeout=5)
                 repo.close()
+
+
+class TestRunCheck(unittest.TestCase):
+    """`demo check` percorre o fluxo completo em ambiente descartável."""
+
+    def test_todos_os_passos_passam(self):
+        steps = run_check()
+        falhas = [(s.label, s.detail) for s in steps if not s.ok]
+        self.assertEqual(falhas, [])
+        self.assertEqual(len(steps), 8)
+
+    def test_nao_toca_no_banco_padrao_da_demo(self):
+        # A checagem usa banco temporário: o demo.sqlite3 do diretório atual
+        # não deve ser criado nem modificado.
+        alvo = Path("demo.sqlite3")
+        antes = alvo.stat().st_mtime_ns if alvo.exists() else None
+        run_check()
+        depois = alvo.stat().st_mtime_ns if alvo.exists() else None
+        self.assertEqual(antes, depois)
+
+
+class TestCliCheck(unittest.TestCase):
+    """A saída do `demo check` deve ser legível: sem traceback, com veredito."""
+
+    raiz = Path(__file__).resolve().parent.parent
+
+    def _rodar(self, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, "-m", "helpdesk.demo", "check"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(self.raiz), timeout=120, env=env,
+        )
+
+    def test_sucesso_sai_com_zero_e_resume(self):
+        saida = self._rodar()
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertIn("[ok]", saida.stdout)
+        self.assertIn("Tudo certo", saida.stdout)
+        self.assertNotIn("FALHOU", saida.stdout)
+
+    def test_falha_aponta_o_passo_sem_traceback(self):
+        # Quadro de atendentes configurado para um arquivo inexistente: a
+        # checagem deve falhar nesse passo, com mensagem curta e código 1.
+        env = {
+            **os.environ,
+            "HELPDESK_ATTENDANTS_PATH": str(self.raiz / "quadro-inexistente.json"),
+        }
+        saida = self._rodar(env=env)
+        combinado = (saida.stdout or "") + (saida.stderr or "")
+        self.assertEqual(saida.returncode, 1)
+        self.assertIn("FALHOU", combinado)
+        self.assertIn("quadro de atendentes", combinado)
+        self.assertNotIn("Traceback", combinado)
 
 
 class TestCliAmigavel(unittest.TestCase):
