@@ -189,8 +189,12 @@ class SqliteTicketRepository:
     adequado ao volume de um helpdesk interno e simples de raciocinar.
     """
 
-    def __init__(self, db_path: str) -> None:
-        self._conn = sqlite3.connect(db_path)
+    def __init__(self, db_path: str, *, allow_cross_thread: bool = False) -> None:
+        # ``allow_cross_thread=True`` permite usar a conexão a partir de outras
+        # threads (ex.: as threads de requisição do servidor HTTP local). Quem
+        # ativa é responsável por serializar o acesso — o http_app usa um Lock
+        # por requisição; o módulo sqlite3 ainda serializa no nível C.
+        self._conn = sqlite3.connect(db_path, check_same_thread=not allow_cross_thread)
         self._conn.row_factory = sqlite3.Row
         self._init_schema()
 

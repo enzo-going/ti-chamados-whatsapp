@@ -59,7 +59,7 @@ Antes: `.\demo.ps1` (painel abre sozinho no navegador).
 
 > "A regra de negócio é independente do WhatsApp: hoje os testes e a demo usam
 > um transporte simulado, e a integração oficial entra depois sem reescrever
-> nada. São 113 testes automatizados, sem dependências externas — Python puro
+> nada. São 117 testes automatizados, sem dependências externas — Python puro
 > e SQLite."
 
 ## 5. Próximos passos possíveis (1 min)

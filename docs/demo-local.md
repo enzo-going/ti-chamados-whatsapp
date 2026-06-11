@@ -91,10 +91,13 @@ o estado novo no próximo refresh.)
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| `send` falha com "Não consegui falar com o servidor" | servidor não está rodando, ou porta diferente | suba o passo 2; confira `--port` |
-| Porta 8000 ocupada | outro processo na porta | `--port 8010` no servidor e no `send`; painel em `:8010` |
+| `send` diz "O servidor local não está respondendo" | servidor não está rodando, ou está em outra porta | suba o passo 2; o `--port` do `send` precisa ser o mesmo do servidor |
+| `demo.ps1` avisa que a porta já está em uso | a janela de uma demo anterior continua aberta | feche a janela antiga e rode de novo, ou `.\demo.ps1 -Port 8010` |
 | `O arquivo demo.sqlite3 já existe` | seed sem `--reset` | acrescente `--reset` |
 | Painel vazio | banco sem chamados em aberto | rode o seed de novo ou envie um `send` |
+
+Pode deixar o painel aberto no navegador à vontade: o servidor atende várias
+conexões ao mesmo tempo (navegador + `send` + refresh) sem travar.
 
 > **Escopo:** demonstração de desenvolvimento. O servidor não deve ser exposto
 > para fora de `127.0.0.1`; não há autenticação porque nada sai da máquina.

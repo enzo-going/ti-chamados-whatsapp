@@ -223,6 +223,31 @@ Primeira concretização da direção registrada na decisão 8: uma página HTML
 O responsável é exibido só pelo **nome** (sem papel/cargo), seguindo o princípio
 de mínimo de dados da decisão 8; o papel pode entrar depois se houver uso real.
 
+## 13. Servidor local com threads e acesso serializado ao SQLite
+
+**Contexto (bug real da demonstração):** com o painel aberto no navegador, o
+`demo send` estourava timeout de forma intermitente — e o evento ainda era
+processado depois, fora de hora. Causa raiz: o servidor usava o ``HTTPServer``
+de **thread única** da stdlib, e navegadores mantêm conexões TCP abertas sem
+enviar nada (keep-alive/preconnect especulativo). Uma única conexão ociosa
+ocupava o servidor inteiro; os POSTs ficavam na fila até o cliente desistir.
+
+**Decisão:** trocar para ``ThreadingHTTPServer`` (uma thread daemon por
+conexão), com duas salvaguardas:
+
+- **Um ``Lock`` no handler serializa o trabalho real** (serviço + banco). As
+  threads existem só para que conexões ociosas não bloqueiem ninguém — o
+  volume de um helpdesk interno não pede paralelismo de verdade, e serializar
+  evita qualquer corrida no serviço.
+- **SQLite com ``check_same_thread=False``, por opt-in explícito**
+  (``SqliteTicketRepository(..., allow_cross_thread=True)``). A conexão passa a
+  ser usada pelas threads de requisição; o lock acima garante um uso por vez.
+  O padrão continua estrito para os demais usos.
+
+Um teste de regressão fixa o cenário: com uma conexão ociosa aberta, um POST
+deve responder normalmente. O CLI da demonstração também passou a tratar erros
+de conexão com mensagem curta e orientação (sem traceback em uso normal).
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

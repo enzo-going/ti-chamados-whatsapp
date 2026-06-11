@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import socket
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -121,6 +124,99 @@ class TestSendMessage(unittest.TestCase):
         r2 = send_message("já tentei reiniciar e nada", base_url=self.base_url)
         self.assertEqual(r1["ticket_id"], r2["ticket_id"])
         self.assertFalse(r2["duplicate"])  # evento novo, mesmo chamado
+
+    def test_conexao_ociosa_nao_bloqueia_o_servidor(self):
+        # Regressão: o navegador com o painel aberto mantém conexões TCP sem
+        # enviar nada (keep-alive/preconnect). Num servidor de thread única
+        # isso travava a fila e o `demo send` estourava timeout.
+        host, port = self.server.server_address
+        idle = socket.create_connection((host, port))
+        try:
+            result = send_message("a impressora parou", base_url=self.base_url)
+            self.assertIn("ticket_id", result)
+        finally:
+            idle.close()
+
+    def test_varios_sends_simultaneos(self):
+        resultados: dict[str, dict] = {}
+        erros: list[Exception] = []
+
+        def enviar(sender: str) -> None:
+            try:
+                resultados[sender] = send_message(
+                    "sem internet na minha sala", sender=sender, base_url=self.base_url
+                )
+            except Exception as exc:  # noqa: BLE001 - teste registra qualquer falha
+                erros.append(exc)
+
+        threads = [
+            threading.Thread(target=enviar, args=(f"55139900002{i:02d}",))
+            for i in range(5)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+        self.assertEqual(erros, [])
+        ids = {r["ticket_id"] for r in resultados.values()}
+        self.assertEqual(len(ids), 5)  # remetentes distintos, chamados distintos
+
+
+class TestServidorComSqliteEmThreads(unittest.TestCase):
+    """O servidor com threads precisa conseguir usar o repositório SQLite."""
+
+    def test_send_e_dashboard_sobre_sqlite(self):
+        import urllib.request
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = str(Path(tmpdir) / "demo-threads.sqlite3")
+            repo = SqliteTicketRepository(db, allow_cross_thread=True)
+            service = HelpdeskService(
+                transport=FakeTransport(),
+                attendants=[Attendant("ti1", "Atendente 1")],
+                repository=repo,
+            )
+            server = make_server(
+                MessageGateway(service), repo, host="127.0.0.1", port=0
+            )
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                result = send_message("a rede caiu para todos", base_url=base_url)
+                self.assertEqual(result["category"], "rede")
+                with urllib.request.urlopen(f"{base_url}/dashboard", timeout=5) as resp:
+                    page = resp.read().decode("utf-8")
+                self.assertIn(f"<td>#{result['ticket_id']}</td>", page)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+                repo.close()
+
+
+class TestCliAmigavel(unittest.TestCase):
+    """`demo send` nunca deve mostrar traceback bruto em uso normal."""
+
+    def test_servidor_fora_do_ar_da_mensagem_curta(self):
+        # Descobre uma porta livre (abre e fecha) — nada estará escutando nela.
+        probe = socket.socket()
+        probe.bind(("127.0.0.1", 0))
+        porta_livre = probe.getsockname()[1]
+        probe.close()
+
+        raiz = Path(__file__).resolve().parent.parent
+        saida = subprocess.run(
+            [sys.executable, "-m", "helpdesk.demo", "send", "teste",
+             "--port", str(porta_livre)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(raiz), timeout=30,
+        )
+        combinado = (saida.stdout or "") + (saida.stderr or "")
+        self.assertEqual(saida.returncode, 1)
+        self.assertNotIn("Traceback", combinado)
+        self.assertIn("respondendo", combinado)   # "não está respondendo"
+        self.assertIn("--port", combinado)        # orienta conferir a porta
 
 
 if __name__ == "__main__":
