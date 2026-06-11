@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 
 from helpdesk import config
 from helpdesk.attendants import load_roster
@@ -46,14 +47,22 @@ def make_handler(
 
     O repositório entra separado porque o painel é somente leitura: ele lista
     os chamados em aberto sem passar pelo fluxo de entrada.
+
+    O servidor atende cada requisição em uma thread (ver ``make_server``), e
+    este lock serializa o trabalho de verdade (serviço + banco): as threads
+    existem para que conexões ociosas do navegador não bloqueiem ninguém, não
+    para processar em paralelo.
     """
+    work_lock = threading.Lock()
 
     class _Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             if self.path == "/health":
                 self._json(200, {"status": "ok"})
             elif self.path == _DASHBOARD_PATH:
-                self._html(200, render_dashboard(repository.list_open()))
+                with work_lock:
+                    page = render_dashboard(repository.list_open())
+                self._html(200, page)
             else:
                 self._json(404, {"error": "rota não encontrada"})
 
@@ -69,7 +78,8 @@ def make_handler(
                 self._json(400, {"error": "JSON inválido"})
                 return
             try:
-                result = gateway.ingest(payload)
+                with work_lock:
+                    result = gateway.ingest(payload)
             except InvalidPayload as exc:
                 self._json(400, {"error": str(exc)})
                 return
@@ -108,15 +118,23 @@ def make_server(
     host: str = "127.0.0.1",
     port: int = 8000,
 ) -> HTTPServer:
-    """Cria o servidor HTTP local. ``port=0`` escolhe uma porta livre (testes)."""
-    return HTTPServer((host, port), make_handler(gateway, repository))
+    """Cria o servidor HTTP local. ``port=0`` escolhe uma porta livre (testes).
+
+    Usa ``ThreadingHTTPServer`` (uma thread por conexão): navegadores mantêm
+    conexões abertas sem enviar nada (keep-alive/preconnect) e, num servidor de
+    thread única, isso bloqueava a fila — outros clientes (ex.: o
+    ``demo send``) estouravam timeout com o painel aberto. As threads são
+    daemon e o trabalho real é serializado pelo lock do handler.
+    """
+    return ThreadingHTTPServer((host, port), make_handler(gateway, repository))
 
 
 def _build_gateway(db_path: str) -> tuple[MessageGateway, SqliteTicketRepository]:
     # Carrega o quadro antes de abrir o banco: se a configuração estiver
-    # inválida, falha sem deixar conexão pendente.
+    # inválida, falha sem deixar conexão pendente. O banco permite uso a partir
+    # das threads de requisição (acesso serializado pelo lock do handler).
     attendants = load_roster()
-    repo = SqliteTicketRepository(db_path)
+    repo = SqliteTicketRepository(db_path, allow_cross_thread=True)
     service = HelpdeskService(
         transport=FakeTransport(), attendants=attendants, repository=repo
     )

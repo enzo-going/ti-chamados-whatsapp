@@ -97,7 +97,7 @@ helpdesk/
 ├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
 ├── demo.py        # demonstração: seed de chamados fake + simulação de mensagens
 └── service.py     # orquestra o fluxo completo
-tests/             # 113 testes (unittest)
+tests/             # 117 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 demo.ps1           # demo completa em um comando (Windows)
 ```

@@ -26,8 +26,11 @@ import urllib.error
 import urllib.request
 
 # Saída com acentos/“·” em qualquer console (mesmo ajuste do main.py).
+# O stderr também: as mensagens de erro amigáveis têm acentos.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -220,10 +223,22 @@ def _cmd_send(args: argparse.Namespace) -> None:
             base_url=base_url,
             event_id=args.event_id,
         )
-    except urllib.error.URLError as exc:
+    except urllib.error.HTTPError as exc:
+        # O servidor respondeu, mas recusou o payload (ex.: campo inválido).
+        try:
+            detail = json.loads(exc.read()).get("error", "")
+        except Exception:
+            detail = ""
+        sys.exit(f"O servidor recusou a mensagem (HTTP {exc.code}). {detail}".strip())
+    except (TimeoutError, ConnectionError, urllib.error.URLError, OSError):
         sys.exit(
-            f"Não consegui falar com o servidor em {base_url} ({exc.reason}).\n"
-            f"Ele está rodando? Suba com: python -m helpdesk.http_app --db {DEFAULT_DEMO_DB}"
+            f"O servidor local não está respondendo em {base_url}.\n"
+            "  - confirme que a demo está rodando (.\\demo.ps1 ou "
+            f"python -m helpdesk.http_app --db {DEFAULT_DEMO_DB})\n"
+            "  - confirme a porta: o número em --port aqui precisa ser o mesmo "
+            "do servidor\n"
+            f"  - tente de novo: python -m helpdesk.demo send \"{args.text}\" "
+            f"--port {args.port}"
         )
     if result.get("duplicate"):
         print(

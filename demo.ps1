@@ -9,11 +9,35 @@
 
 param([int]$Port = 8000)
 
+# Porta já em uso? Provavelmente a janela de uma demo anterior continua aberta.
+$emUso = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+if ($emUso) {
+    Write-Host "A porta $Port já está em uso — provavelmente uma demo anterior ainda está rodando."
+    Write-Host "Feche a janela antiga do servidor e rode de novo, ou use outra porta:"
+    Write-Host "    .\demo.ps1 -Port 8010"
+    exit 1
+}
+
 python -m helpdesk.demo seed --db demo.sqlite3 --reset
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Start-Process python -ArgumentList "-m", "helpdesk.http_app", "--db", "demo.sqlite3", "--port", "$Port"
-Start-Sleep -Seconds 1
+
+# Espera o servidor responder (até ~5s) antes de abrir o navegador.
+$pronto = $false
+foreach ($tentativa in 1..10) {
+    Start-Sleep -Milliseconds 500
+    try {
+        $null = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -UseBasicParsing -TimeoutSec 2
+        $pronto = $true
+        break
+    } catch { }
+}
+if (-not $pronto) {
+    Write-Host "O servidor não respondeu na porta $Port. Veja o erro na janela do servidor."
+    exit 1
+}
+
 Start-Process "http://127.0.0.1:$Port/dashboard"
 
 Write-Host ""
