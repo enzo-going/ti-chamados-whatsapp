@@ -40,6 +40,9 @@ navegador. Passo a passo manual, simulação de mensagens e solução de problem
 em [`docs/demo-local.md`](docs/demo-local.md).
 
 ```bash
+# Pré-voo da demonstração: percorre o fluxo completo em ambiente descartável
+python -m helpdesk.demo check
+
 # Banco de demonstração com chamados fake (recriável à vontade)
 python -m helpdesk.demo seed --reset
 
@@ -95,9 +98,9 @@ helpdesk/
 ├── inbound.py     # payload neutro → Message, com idempotência por event_id
 ├── http_app.py    # servidor HTTP local (127.0.0.1): entrada + painel
 ├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
-├── demo.py        # demonstração: seed de chamados fake + simulação de mensagens
+├── demo.py        # demonstração: seed fake, simulação de mensagens e checagem (check)
 └── service.py     # orquestra o fluxo completo
-tests/             # 117 testes (unittest)
+tests/             # 121 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 demo.ps1           # demo completa em um comando (Windows)
 ```

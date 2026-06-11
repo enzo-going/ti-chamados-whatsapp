@@ -24,7 +24,10 @@ dependências de runtime.
   com papéis e ativo/inativo; só ativos entram no rodízio.
 - Modo de demonstração: seed de chamados fake + simulação de mensagens
   ([passo a passo](docs/demo-local.md) · [roteiro de apresentação](docs/roteiro-demo.md)).
-- Suíte com 117 testes (unittest); CI em Python 3.10/3.11/3.12.
+- Checagem automática da demo (`python -m helpdesk.demo check` ou
+  `.\demo.ps1 -Check`): percorre o fluxo completo em ambiente descartável e
+  aponta o passo que falhar — pré-voo de apresentações.
+- Suíte com 121 testes (unittest); CI em Python 3.10/3.11/3.12.
 
 ## O que está pendente / próximos passos
 
@@ -44,6 +47,9 @@ Decisões registradas no [roadmap](docs/roadmap.md) e nas [decisões](docs/decis
 ```powershell
 # Testes (devem ficar todos verdes)
 python -m unittest discover -s tests
+
+# Pré-voo da demo: o fluxo completo funciona nesta máquina?
+python -m helpdesk.demo check
 
 # Demonstração completa em um comando (Windows)
 .\demo.ps1

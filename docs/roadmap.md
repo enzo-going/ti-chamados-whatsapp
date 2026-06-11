@@ -125,6 +125,11 @@ Pequenas melhorias de domínio, independentes do plano por fases:
   chamados fake pelo fluxo real do serviço e simulação de mensagens via
   `POST /inbound`. Passo a passo em [demo-local](demo-local.md); roteiro de
   apresentação em [roteiro-demo](roteiro-demo.md).
+- **Checagem automática da demonstração** (`python -m helpdesk.demo check` /
+  `.\demo.ps1 -Check`): percorre o fluxo completo — Python, quadro de
+  atendentes, seed, servidor, triagem, follow-up, idempotência e painel — em
+  ambiente descartável (banco temporário + porta efêmera) e aponta o passo que
+  falhar. Pensada como pré-voo de apresentações.
 
 ## Decisões em aberto (suas)
 

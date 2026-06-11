@@ -5,9 +5,10 @@ tags: [helpdesk, demo, apresentacao]
 # Roteiro de demonstração (≈10 minutos)
 
 Guia curto para apresentar o sistema a alguém de fora do desenvolvimento
-(ex.: liderança do setor de TI). Pré-requisito: ter rodado a
-[demonstração local](demo-local.md) ao menos uma vez antes, para não haver
-surpresa ao vivo.
+(ex.: liderança do setor de TI). Pré-requisitos: ter rodado a
+[demonstração local](demo-local.md) ao menos uma vez antes e, minutos antes de
+começar, rodar `python -m helpdesk.demo check` — 8 passos verdes significam
+zero surpresa ao vivo.
 
 ## 1. O problema (1 min)
 
@@ -59,7 +60,7 @@ Antes: `.\demo.ps1` (painel abre sozinho no navegador).
 
 > "A regra de negócio é independente do WhatsApp: hoje os testes e a demo usam
 > um transporte simulado, e a integração oficial entra depois sem reescrever
-> nada. São 117 testes automatizados, sem dependências externas — Python puro
+> nada. São 121 testes automatizados, sem dependências externas — Python puro
 > e SQLite."
 
 ## 5. Próximos passos possíveis (1 min)
