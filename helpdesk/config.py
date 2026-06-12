@@ -34,15 +34,19 @@ DB_PATH_ENV = "HELPDESK_DB_PATH"
 # atendentes. Sem ela, o sistema usa um quadro de exemplo (demo/testes).
 ATTENDANTS_PATH_ENV = "HELPDESK_ATTENDANTS_PATH"
 
-# Variáveis reservadas para a integração de mensagens (Fase 3 do roadmap).
-# O código ainda não as utiliza: os nomes ficam registrados aqui (e em
-# .env.example) para a checagem reportar presença/ausência. Os VALORES são
+# Variáveis da integração de mensagens (Fase 3 do roadmap). A borda local em
+# ``helpdesk/whatsapp.py`` as consome pelos accessors abaixo; a conexão real
+# continua dependendo da decisão da estratégia do número. Os VALORES são
 # sensíveis e nunca devem aparecer em saída de terminal, log ou commit.
+WHATSAPP_TOKEN_ENV = "WHATSAPP_TOKEN"
+WHATSAPP_PHONE_NUMBER_ID_ENV = "WHATSAPP_PHONE_NUMBER_ID"
+WHATSAPP_VERIFY_TOKEN_ENV = "WHATSAPP_VERIFY_TOKEN"
+WHATSAPP_APP_SECRET_ENV = "WHATSAPP_APP_SECRET"
 INTEGRATION_ENV_VARS: tuple[str, ...] = (
-    "WHATSAPP_TOKEN",
-    "WHATSAPP_PHONE_NUMBER_ID",
-    "WHATSAPP_VERIFY_TOKEN",
-    "WHATSAPP_APP_SECRET",
+    WHATSAPP_TOKEN_ENV,
+    WHATSAPP_PHONE_NUMBER_ID_ENV,
+    WHATSAPP_VERIFY_TOKEN_ENV,
+    WHATSAPP_APP_SECRET_ENV,
 )
 
 
@@ -54,6 +58,26 @@ def database_path() -> str:
 def attendants_path() -> str | None:
     """Caminho do JSON do quadro de atendentes, ou None se não configurado."""
     return os.environ.get(ATTENDANTS_PATH_ENV) or None
+
+
+def whatsapp_token() -> str | None:
+    """Token de acesso da API de mensagens, ou None se não configurado."""
+    return os.environ.get(WHATSAPP_TOKEN_ENV) or None
+
+
+def whatsapp_phone_number_id() -> str | None:
+    """Id do número remetente na API, ou None se não configurado."""
+    return os.environ.get(WHATSAPP_PHONE_NUMBER_ID_ENV) or None
+
+
+def whatsapp_verify_token() -> str | None:
+    """Token do handshake de verificação do webhook, ou None."""
+    return os.environ.get(WHATSAPP_VERIFY_TOKEN_ENV) or None
+
+
+def whatsapp_app_secret() -> str | None:
+    """App secret usado na assinatura do webhook, ou None."""
+    return os.environ.get(WHATSAPP_APP_SECRET_ENV) or None
 
 
 # --------------------------------------------------------------------------- #

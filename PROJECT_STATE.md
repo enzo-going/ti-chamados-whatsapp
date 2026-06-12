@@ -7,7 +7,7 @@ concentra estado, comandos e checklist do dia a dia.
 ## Estado atual
 
 - **Branch:** `main` (sincronizada com `origin/main`).
-- **Suíte de testes:** 135 testes (unittest), todos verdes.
+- **Suíte de testes:** 167 testes (unittest), todos verdes.
 - **CI:** GitHub Actions em Python 3.10 / 3.11 / 3.12.
 - **Working tree:** limpo, sem pendências de feature em aberto.
 - **Runtime:** Python 3.10+ puro, zero dependências externas.
@@ -47,6 +47,12 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
   integração apenas como definida/não definida (valores nunca aparecem).
 - Preparação de pré-integração sem segredos: `.env.example` (somente nomes de
   variáveis) e checklist técnico em [docs/pre-integracao.md](docs/pre-integracao.md).
+- Borda local da Cloud API (`helpdesk/whatsapp.py`), testada sem rede:
+  handshake de verificação do webhook, validação de assinatura HMAC-SHA256,
+  parser do payload de webhook → payload neutro do `/inbound` (id da mensagem
+  = `event_id`, idempotência aproveitada) e `CloudApiTransport` de envio com
+  HTTP injetável (token nunca aparece em `repr`/erros). Rotas `/webhook` no
+  servidor local, fechadas (503) sem configuração.
 
 ## Arquivos principais
 
@@ -57,8 +63,9 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 | `helpdesk/attendants.py` | Quadro de atendentes configurável (JSON local) |
 | `helpdesk/repository.py` | Armazenamento em memória (testes/demo) + SQLite (persistente) |
 | `helpdesk/inbound.py` | Entrada: payload neutro → `Message`, com idempotência |
+| `helpdesk/whatsapp.py` | Borda da Cloud API: webhook (verificação + assinatura), parser e envio |
 | `helpdesk/service.py` | Orquestra o fluxo completo |
-| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
+| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel + `/webhook` |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + HTML |
 | `helpdesk/demo.py` | Demonstração: seed fake, simulação de mensagens e `check` |
 | `helpdesk/config.py` | Caminhos (banco, quadro) via variáveis de ambiente |
@@ -68,22 +75,28 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 
 ### Alterações recentes mais relevantes
 
-- `helpdesk/config.py`: subcomando `check` (diagnóstico seguro da configuração
-  local) e nomes reservados das variáveis da integração futura
-  (`INTEGRATION_ENV_VARS`) — presença/ausência reportada sem exibir valores.
-- `.env.example`: modelo com os nomes das variáveis (valores sempre vazios;
-  há teste garantindo).
-- `docs/pre-integracao.md`: checklist técnico do que validar antes de conectar
-  uma linha real (Fase 3 segue bloqueada por decisão).
-- `tests/test_config_check.py`: 14 testes — não exposição de valores, ausência
-  de efeitos colaterais e salvaguardas do repositório (`.gitignore` cobre
-  `.env`/`atendentes.json`/`*.sqlite3`; `.env.example` sem valores).
+- `helpdesk/whatsapp.py` (novo): borda local da Cloud API — verificação do
+  webhook, assinatura HMAC-SHA256 (fail closed), parser do payload para o
+  formato do `/inbound` e `CloudApiTransport` com HTTP injetável.
+- `helpdesk/http_app.py`: rotas `GET/POST /webhook` (503 sem configuração;
+  403 sem assinatura válida) e flag `--transport fake|cloud-api` (a opção
+  `cloud-api` exige as variáveis de ambiente e só é usada na validação
+  supervisionada).
+- `helpdesk/config.py`: accessors das variáveis da integração
+  (`whatsapp_token()` etc.) — valores continuam nunca aparecendo em saída.
+- `tests/test_whatsapp.py`: 32 testes — handshake, assinatura, parser
+  (status/tipos ignorados sem vazar conteúdo), idempotência por id de
+  mensagem, transporte sem rede e token fora de `repr`/erros, rotas de ponta
+  a ponta em porta efêmera.
+- `docs/pre-integracao.md`: seção da borda implementada + roteiro do dia da
+  validação com número de teste.
 
 ## Pendências técnicas
 
-- **Fase 3 — integração de mensagens (Cloud API):** bloqueada pela decisão da
-  estratégia do número. Nenhuma integração real conectada, por escolha.
-  Pré-requisitos locais mapeados em [docs/pre-integracao.md](docs/pre-integracao.md).
+- **Fase 3 — integração de mensagens (Cloud API):** borda local pronta e
+  testada sem rede (`helpdesk/whatsapp.py`); **a conexão real continua
+  bloqueada** pela decisão da estratégia do número. Roteiro do dia da
+  validação em [docs/pre-integracao.md](docs/pre-integracao.md).
 - **Fase 4 — interface dos atendentes:** painel interativo ou comandos;
   aguardando definição.
 - **Fase 5 — observabilidade:** métricas, notificação de prioridade alta.

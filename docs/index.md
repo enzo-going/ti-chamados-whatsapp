@@ -29,7 +29,8 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/replies.py` | Mensagens automáticas (pt-BR) |
 | `helpdesk/service.py` | Orquestra o fluxo completo |
 | `helpdesk/inbound.py` | Camada de entrada: payload neutro → `Message`, com idempotência |
-| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
+| `helpdesk/whatsapp.py` | Borda da Cloud API: verificação do webhook, assinatura, parser e transporte de envio (HTTP injetável) |
+| `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel + rotas `/webhook` |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + página HTML |
 | `helpdesk/demo.py` | Demonstração: seed fake, simulação de mensagens e checagem automática (`check`) |
 | `helpdesk/config.py` | Caminhos via variáveis de ambiente + checagem segura de configuração (`check`) |
@@ -40,7 +41,11 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 
 - **Fase 1 — Persistência SQLite:** concluída (ver [roadmap](roadmap.md)).
 - **Fase 2 — Entrada HTTP local + idempotência:** parte local entregue
-  (payload neutro, idempotência, follow-up); bordas reais aguardam a Fase 3.
+  (payload neutro, idempotência, follow-up).
+- **Fase 3 — Cloud API:** borda local entregue e testada sem rede
+  (verificação do webhook, assinatura, parser, transporte injetável — ver
+  [pre-integracao](pre-integracao.md)); a conexão real segue bloqueada pela
+  decisão da estratégia do número.
 - **Atendentes configuráveis:** entregue — quadro em JSON local com papéis e
   ativo/inativo (ver [decisões](decisoes.md), decisão 11).
 - **Painel local somente leitura:** entregue — `/dashboard` com projeção
