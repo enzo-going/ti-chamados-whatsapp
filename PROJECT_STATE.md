@@ -7,7 +7,7 @@ concentra estado, comandos e checklist do dia a dia.
 ## Estado atual
 
 - **Branch:** `main` (sincronizada com `origin/main`).
-- **Suíte de testes:** 121 testes (unittest), todos verdes.
+- **Suíte de testes:** 135 testes (unittest), todos verdes.
 - **CI:** GitHub Actions em Python 3.10 / 3.11 / 3.12.
 - **Working tree:** limpo, sem pendências de feature em aberto.
 - **Runtime:** Python 3.10+ puro, zero dependências externas.
@@ -42,6 +42,11 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 - Checagem automática da demonstração (`python -m helpdesk.demo check` ou
   `.\demo.ps1 -Check`): percorre o fluxo completo em ambiente descartável
   (banco temporário + porta efêmera) e aponta o passo que falhar.
+- Checagem segura da configuração (`python -m helpdesk.config check`): valida
+  banco e quadro sem efeitos colaterais e reporta as variáveis reservadas da
+  integração apenas como definida/não definida (valores nunca aparecem).
+- Preparação de pré-integração sem segredos: `.env.example` (somente nomes de
+  variáveis) e checklist técnico em [docs/pre-integracao.md](docs/pre-integracao.md).
 
 ## Arquivos principais
 
@@ -63,17 +68,22 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 
 ### Alterações recentes mais relevantes
 
-- `helpdesk/demo.py`: subcomando `check` (pré-voo do fluxo completo).
-- `demo.ps1`: opção `-Check`; arquivo gravado em UTF-8 com BOM para parsear
-  no Windows PowerShell 5.1.
-- `tests/test_demo.py`: cobertura da checagem (sucesso, caminho de falha e
-  garantia de não tocar no banco padrão).
-- `docs/` e `README.md`: documentação da checagem automática.
+- `helpdesk/config.py`: subcomando `check` (diagnóstico seguro da configuração
+  local) e nomes reservados das variáveis da integração futura
+  (`INTEGRATION_ENV_VARS`) — presença/ausência reportada sem exibir valores.
+- `.env.example`: modelo com os nomes das variáveis (valores sempre vazios;
+  há teste garantindo).
+- `docs/pre-integracao.md`: checklist técnico do que validar antes de conectar
+  uma linha real (Fase 3 segue bloqueada por decisão).
+- `tests/test_config_check.py`: 14 testes — não exposição de valores, ausência
+  de efeitos colaterais e salvaguardas do repositório (`.gitignore` cobre
+  `.env`/`atendentes.json`/`*.sqlite3`; `.env.example` sem valores).
 
 ## Pendências técnicas
 
 - **Fase 3 — integração de mensagens (Cloud API):** bloqueada pela decisão da
   estratégia do número. Nenhuma integração real conectada, por escolha.
+  Pré-requisitos locais mapeados em [docs/pre-integracao.md](docs/pre-integracao.md).
 - **Fase 4 — interface dos atendentes:** painel interativo ou comandos;
   aguardando definição.
 - **Fase 5 — observabilidade:** métricas, notificação de prioridade alta.
@@ -119,6 +129,9 @@ python main.py --db chamados.sqlite3         # persistindo em SQLite
 ```powershell
 # Suíte completa (deve ficar toda verde)
 python -m unittest discover -s tests
+
+# Diagnóstico seguro da configuração local (não exibe valores de variáveis)
+python -m helpdesk.config check
 
 # Pré-voo da demonstração: o fluxo completo funciona nesta máquina?
 python -m helpdesk.demo check                # ou: .\demo.ps1 -Check
