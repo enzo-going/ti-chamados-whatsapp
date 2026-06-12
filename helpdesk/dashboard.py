@@ -119,8 +119,8 @@ _PAGE = """<!DOCTYPE html>
        border-bottom: 2px solid #3c4043; }}
   td {{ padding: .55rem .75rem; border-bottom: 1px solid #2a2f35; }}
   tr.alta td {{ background: rgba(217, 48, 37, .12); }}
-  tr.antigo td {{ box-shadow: inset 4px 0 0 #fdd663; }}
-  tr.critico td {{ box-shadow: inset 4px 0 0 #f28b82; }}
+  tr.antigo td:first-child {{ box-shadow: inset 4px 0 0 #fdd663; }}
+  tr.critico td:first-child {{ box-shadow: inset 4px 0 0 #f28b82; }}
   .prio {{ font-weight: 600; text-transform: uppercase; font-size: .9em; }}
   tr.alta .prio {{ color: #f28b82; }}
   tr.media .prio {{ color: #fdd663; }}
