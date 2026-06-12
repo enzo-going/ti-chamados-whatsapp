@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -432,14 +433,24 @@ def _cmd_check(args: argparse.Namespace) -> None:
 
 def _cmd_seed(args: argparse.Namespace) -> None:
     path = Path(args.db)
-    if path.exists():
-        if not args.reset:
-            sys.exit(
-                f"O arquivo {args.db} já existe. Use --reset para recriar do zero."
-            )
-        path.unlink()
-    repository = SqliteTicketRepository(str(path))
+    if path.exists() and not args.reset:
+        sys.exit(
+            f"O arquivo {args.db} já existe. Use --reset para recriar do zero."
+        )
+    # Reset via SQL (clear), não apagando o arquivo: assim funciona mesmo com o
+    # servidor da demo aberto. No Windows, apagar um .sqlite3 em uso falha com
+    # PermissionError/WinError 32 — daí a mensagem amigável se o banco estiver
+    # travado por um processo que esteja escrevendo no momento.
     try:
+        repository = SqliteTicketRepository(str(path))
+    except sqlite3.OperationalError:
+        sys.exit(
+            f"Não foi possível abrir {args.db} (em uso?). Feche a janela do "
+            "servidor da demo e rode de novo."
+        )
+    try:
+        if args.reset:
+            repository.clear()
         tickets = seed_demo(repository)
         abertos = [t for t in tickets if t.is_open]
         altas = [t for t in abertos if t.priority.value == "alta"]
@@ -451,6 +462,11 @@ def _cmd_seed(args: argparse.Namespace) -> None:
         print("\nPróximos passos:")
         print(f"  python -m helpdesk.http_app --db {args.db}")
         print("  painel: http://127.0.0.1:8000/dashboard")
+    except sqlite3.OperationalError:
+        sys.exit(
+            f"O banco {args.db} está em uso (servidor da demo escrevendo agora?). "
+            "Feche a janela do servidor e rode de novo."
+        )
     finally:
         repository.close()
 

@@ -159,6 +159,40 @@ class TestPersistencia(SqliteRepoTestCase):
         self.assertIsNotNone(recarregado.closed_at.tzinfo)
 
 
+class TestClear(SqliteRepoTestCase):
+    def test_clear_esvazia_e_reinicia_ids(self):
+        make_ticket(self.repo, "a", Status.ABERTO)
+        t2 = make_ticket(self.repo, "b", Status.ABERTO)
+        self.repo.record_event("e1", t2.id)
+        self.assertEqual(len(self.repo.all()), 2)
+
+        self.repo.clear()
+
+        self.assertEqual(self.repo.all(), [])
+        self.assertEqual(self.repo.next_id(), 1)  # ids recomeçam do 1
+        self.assertIsNone(self.repo.seen_event("e1"))
+
+    def test_clear_funciona_com_arquivo_aberto_por_outra_conexao(self):
+        # Regressão (Windows/WinError 32): o --reset não pode depender de apagar
+        # o arquivo, que falha enquanto outro processo (o servidor da demo) o
+        # mantém aberto. Limpar via SQL por uma 2ª conexão deve funcionar e ficar
+        # visível para a 1ª.
+        servidor = SqliteTicketRepository(self.db_path, allow_cross_thread=True)
+        try:
+            make_ticket(servidor, "a", Status.ABERTO)
+            self.assertEqual(len(servidor.all()), 1)
+
+            recriador = SqliteTicketRepository(self.db_path)  # 2ª conexão (o _cmd_seed)
+            try:
+                recriador.clear()
+            finally:
+                recriador.close()
+
+            self.assertEqual(servidor.all(), [])  # 1ª conexão enxerga a limpeza
+        finally:
+            servidor.close()
+
+
 class TestIntegracaoServico(SqliteRepoTestCase):
     def _service(self) -> tuple[HelpdeskService, FakeTransport]:
         transport = FakeTransport()

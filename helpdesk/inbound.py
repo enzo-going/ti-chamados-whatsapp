@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from helpdesk.models import Message, Ticket
 from helpdesk.service import HelpdeskService
@@ -78,9 +78,17 @@ def _parse_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str):
         raise InvalidPayload("timestamp deve ser texto ISO 8601")
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise InvalidPayload(f"timestamp inválido: {value!r}") from exc
+    # Normaliza para UTC. Um timestamp sem fuso ("naive") é assumido como UTC:
+    # todos os horários internos são aware/UTC (ver models._now), e misturar com
+    # um naive quebraria o cálculo de "tempo aberto" no painel e a janela de
+    # follow-up/reabertura ("can't subtract offset-naive and offset-aware").
+    # UTC é o padrão de toda a base e o que o webhook da Cloud API entrega.
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 class MessageGateway:
