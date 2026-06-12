@@ -99,11 +99,12 @@ helpdesk/
 ├── transport.py   # interface de envio + FakeTransport para testes
 ├── replies.py     # mensagens automáticas (pt-BR)
 ├── inbound.py     # payload neutro → Message, com idempotência por event_id
-├── http_app.py    # servidor HTTP local (127.0.0.1): entrada + painel
+├── whatsapp.py    # borda da Cloud API: webhook (verificação + assinatura) e envio (HTTP injetável)
+├── http_app.py    # servidor HTTP local (127.0.0.1): entrada + painel + /webhook
 ├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
 ├── demo.py        # demonstração: seed fake, simulação de mensagens e checagem (check)
 └── service.py     # orquestra o fluxo completo
-tests/             # 135 testes (unittest)
+tests/             # 167 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 demo.ps1           # demo completa em um comando (Windows)
 ```
@@ -164,8 +165,12 @@ primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
 
 ## Próximos passos (planejados)
 
-- [ ] Adaptador de transporte com a **WhatsApp Cloud API** (oficial, sem risco
-      de ban) — pré-requisitos locais em [`docs/pre-integracao.md`](docs/pre-integracao.md)
+- [x] **Borda da Cloud API testável sem rede** (`helpdesk/whatsapp.py`):
+      verificação do webhook, assinatura HMAC, parser do payload e transporte
+      de envio com HTTP injetável — roteiro de validação em
+      [`docs/pre-integracao.md`](docs/pre-integracao.md)
+- [ ] **Conexão real** com a Cloud API (número de teste → produção; depende da
+      decisão da estratégia do número)
 - [x] Persistência em **SQLite** (Fase 1 concluída; SQLAlchemy fica como opção futura)
 - [x] **Atendentes configuráveis** (JSON local com papéis e ativo/inativo, sem hardcode)
 - [x] **Painel local somente leitura** (`/dashboard`; projeção restrita, base do wallboard)

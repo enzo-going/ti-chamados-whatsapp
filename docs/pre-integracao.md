@@ -27,6 +27,27 @@ para receber a borda real quando a decisão for tomada.
   garantindo.
 - **Servidor local:** o HTTP escuta somente em `127.0.0.1`, sem exposição.
 
+## Borda da Cloud API já implementada (local, sem conexão)
+
+`helpdesk/whatsapp.py` entrega as peças que a integração exige, todas
+testadas sem rede (`tests/test_whatsapp.py`):
+
+- **Handshake de verificação do webhook** (`GET /webhook` com `hub.mode`,
+  `hub.verify_token`, `hub.challenge`) — comparação de token em tempo
+  constante.
+- **Validação de assinatura** `X-Hub-Signature-256` (HMAC-SHA256 do corpo
+  bruto com o app secret) — sem assinatura válida, o evento é recusado (403);
+  sem configuração, as rotas respondem 503 (fail closed).
+- **Parser do payload de webhook** → payloads neutros do `/inbound`: o id da
+  mensagem vira `event_id`, ligando reentregas da plataforma à idempotência
+  já persistida. Recibos de status e tipos não suportados são ignorados com
+  motivo (sem conteúdo de mensagem nos motivos).
+- **`CloudApiTransport`** (envio): monta a chamada da Graph API com a função
+  HTTP **injetável** — em teste, nenhuma requisição externa; o token nunca
+  aparece em `repr`/erros. Ativado por `--transport cloud-api` no
+  `helpdesk.http_app`, que exige as variáveis de ambiente e falha citando só
+  os nomes.
+
 ## Checklist pré-voo
 
 Rode na máquina que fará a validação, na raiz do repositório:
@@ -51,6 +72,29 @@ Rode na máquina que fará a validação, na raiz do repositório:
 7. **Varredura de segredos/termos indevidos** no diff antes de qualquer
    commit (repositório público).
 
+## Roteiro do dia da validação (quando a Fase 3 for liberada)
+
+Passos operacionais para o teste supervisionado com **número de teste** — em
+ordem; nenhum deles entra no repositório:
+
+1. Criar o app na plataforma da API oficial e anotar (fora do repo): token de
+   acesso, id do número de teste, app secret; escolher um verify token.
+2. Definir as quatro variáveis no ambiente do terminal
+   (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`,
+   `WHATSAPP_APP_SECRET`) e conferir com `python -m helpdesk.config check`.
+3. Subir o servidor local: `python -m helpdesk.http_app --db teste.sqlite3
+   --transport cloud-api` (o resumo de inicialização mostra as rotas
+   `/webhook` ativas, sem exibir valores).
+4. Expor `127.0.0.1:8000` por um túnel HTTPS temporário (o servidor continua
+   ligado só em loopback; o túnel é a única porta de entrada e morre com o
+   teste).
+5. Registrar a URL do túnel + `/webhook` na plataforma; o handshake GET deve
+   passar na primeira tentativa.
+6. Enviar uma mensagem do número de teste e acompanhar: chamado criado,
+   resposta automática recebida, painel atualizado, reentrega sem duplicar.
+7. Ao final: derrubar o túnel, revogar/rotacionar o token de teste e limpar as
+   variáveis do ambiente.
+
 ## O que continua fora do repositório
 
 - `.env`, tokens e qualquer credencial (somente nomes em `.env.example`);
@@ -61,9 +105,10 @@ Rode na máquina que fará a validação, na raiz do repositório:
 
 ## Fora do escopo deste checklist
 
-- Implementar o transporte real (envio + verificação/assinatura do webhook):
-  isso **é** a Fase 3, que permanece bloqueada até a decisão do número.
-- Expor o servidor para fora de `127.0.0.1` ou colocar webhook público.
+- **Conectar de fato** (registrar webhook público e usar token real): depende
+  da decisão da estratégia do número e de acompanhamento supervisionado.
+- Expor o servidor para fora de `127.0.0.1` de forma permanente — qualquer
+  exposição é temporária, via túnel, e só durante a validação.
 
 Ver também: [roadmap](roadmap.md) · [demo local](demo-local.md) ·
 [índice da documentação](index.md)

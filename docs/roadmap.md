@@ -70,8 +70,16 @@ webhook público exposto, sem credenciais.
 
 ## Fases 3–5 — resumo
 
-- **3. WhatsApp Cloud API:** transporte de envio real + verificação/assinatura do
-  webhook. **Bloqueada** até decidir a estratégia do número (ver abaixo).
+- **3. WhatsApp Cloud API:** a **borda local está pronta** —
+  `helpdesk/whatsapp.py` implementa o handshake de verificação do webhook, a
+  validação de assinatura (HMAC-SHA256), o parser do payload de webhook para
+  o formato neutro do `/inbound` (id da mensagem = `event_id`, aproveitando a
+  idempotência persistida) e o `CloudApiTransport` de envio com HTTP
+  injetável (testado sem rede). As rotas `/webhook` do servidor local ficam
+  fechadas (503) sem `WHATSAPP_VERIFY_TOKEN`/`WHATSAPP_APP_SECRET`. **A
+  conexão real continua bloqueada** até decidir a estratégia do número (ver
+  abaixo); o roteiro do dia da validação está em
+  [pre-integracao](pre-integracao.md).
 - **4. Atendentes:** painel web mínimo *ou* comandos por WhatsApp. Depende da sua
   escolha.
 - **5. Observabilidade:** métricas, notificação de prioridade alta, logs de
