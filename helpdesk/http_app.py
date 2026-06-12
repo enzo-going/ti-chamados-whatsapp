@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
@@ -46,6 +47,7 @@ from helpdesk.transport import FakeTransport, MessagingTransport
 from helpdesk.whatsapp import (
     CloudApiTransport,
     InvalidWebhookPayload,
+    TransportError,
     extract_inbound_payloads,
     valid_signature,
     verify_webhook,
@@ -54,6 +56,32 @@ from helpdesk.whatsapp import (
 _INBOUND_PATH = "/inbound"
 _DASHBOARD_PATH = "/dashboard"
 _WEBHOOK_PATH = "/webhook"
+
+# Log operacional da borda. Regra de privacidade: as mensagens de log nunca
+# incluem telefone, nome de solicitante nem texto de mensagem — apenas números
+# de chamado, contagens e motivos técnicos.
+_log = logging.getLogger(__name__)
+
+
+class BestEffortTransport:
+    """Envio melhor-esforço: falha de transporte não derruba o processamento.
+
+    Quando a resposta automática falha (API instável, token expirado), o
+    chamado já foi criado e persistido. Se a exceção subisse, o webhook
+    responderia erro e a plataforma reentregaria o evento em loop — poluindo o
+    histórico com follow-ups e repetindo envios. Aqui a falha é registrada em
+    log (sem destinatário nem conteúdo) e o fluxo segue: o evento é marcado
+    como processado e a rota responde 200.
+    """
+
+    def __init__(self, inner: MessagingTransport) -> None:
+        self._inner = inner
+
+    def send(self, recipient: str, text: str) -> None:
+        try:
+            self._inner.send(recipient, text)
+        except TransportError as exc:
+            _log.warning("resposta automática não enviada: %s", exc)
 
 
 def make_handler(
@@ -112,8 +140,14 @@ def make_handler(
                 with work_lock:
                     result = gateway.ingest(payload)
             except InvalidPayload as exc:
+                _log.warning("/inbound: payload recusado: %s", exc)
                 self._json(400, {"error": str(exc)})
                 return
+            _log.info(
+                "/inbound: chamado #%d (%s)",
+                result.ticket.id,
+                "reentrega, nada duplicado" if result.duplicate else "evento novo",
+            )
             self._json(
                 200,
                 {
@@ -144,6 +178,7 @@ def make_handler(
             raw = self.rfile.read(length) if length else b""
             signature = self.headers.get("X-Hub-Signature-256")
             if not valid_signature(webhook_app_secret, raw, signature):
+                _log.warning("/webhook: assinatura inválida — evento recusado")
                 self._json(403, {"error": "assinatura inválida"})
                 return
             try:
@@ -170,6 +205,11 @@ def make_handler(
                 )
             # Sempre 200 com assinatura válida: a plataforma reentrega eventos
             # respondidos com erro, e recibos/tipos ignorados não são erro.
+            _log.info(
+                "/webhook: %d processado(s), %d ignorado(s)",
+                len(tickets),
+                len(ignored),
+            )
             self._json(
                 200,
                 {"processed": len(tickets), "ignored": len(ignored), "tickets": tickets},
@@ -239,7 +279,9 @@ def _build_gateway(
     attendants = load_roster()
     repo = SqliteTicketRepository(db_path, allow_cross_thread=True)
     service = HelpdeskService(
-        transport=transport or FakeTransport(),
+        # Melhor-esforço por construção: o processamento do evento (chamado +
+        # idempotência) nunca é desfeito por uma falha no envio da resposta.
+        transport=BestEffortTransport(transport or FakeTransport()),
         attendants=attendants,
         repository=repo,
     )
@@ -263,6 +305,12 @@ def main() -> None:
         "supervisionada com número de teste.",
     )
     args = parser.parse_args()
+
+    # Log operacional no terminal do servidor (INFO). Configurado apenas aqui,
+    # no executável — importar o módulo não mexe no logging de ninguém.
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
 
     transport: MessagingTransport | None = None
     if args.transport == "cloud-api":

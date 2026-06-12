@@ -23,7 +23,7 @@ import urllib.request
 from unittest import mock
 
 from helpdesk import config
-from helpdesk.http_app import make_server
+from helpdesk.http_app import BestEffortTransport, make_server
 from helpdesk.inbound import MessageGateway
 from helpdesk.models import Attendant
 from helpdesk.repository import InMemoryTicketRepository
@@ -459,6 +459,59 @@ class TestWebhookNaoConfigurado(unittest.TestCase):
             with exc:
                 status = exc.code
         self.assertEqual(status, 503)
+
+
+class FailingTransport:
+    """Transporte que sempre falha no envio, como uma API fora do ar."""
+
+    def send(self, recipient: str, text: str) -> None:
+        raise TransportError("envio recusado pela API (HTTP 503): instabilidade")
+
+
+class TestBestEffortTransport(unittest.TestCase):
+    """Falha no envio da resposta não pode derrubar o processamento do evento.
+
+    Se a exceção subisse até a rota, a plataforma reentregaria o evento em
+    loop (o webhook responderia erro) — por isso o servidor embrulha o
+    transporte em ``BestEffortTransport``.
+    """
+
+    def test_repassa_envio_ao_transporte_interno(self):
+        fake = FakeTransport()
+        BestEffortTransport(fake).send("5513990003000", "olá")
+        self.assertEqual(len(fake.sent), 1)
+        self.assertEqual(fake.sent[0].recipient, "5513990003000")
+
+    def test_falha_de_envio_nao_interrompe_o_processamento(self):
+        repo = InMemoryTicketRepository()
+        service = HelpdeskService(
+            transport=BestEffortTransport(FailingTransport()),
+            attendants=[Attendant("ti1", "Atendente 1")],
+            repository=repo,
+        )
+        gateway = MessageGateway(service)
+        payload = {
+            "event_id": "evt-falha-1",
+            "sender": "5513990003001",
+            "text": "a rede caiu de novo",
+        }
+        with self.assertLogs("helpdesk.http_app", level="WARNING") as logs:
+            result = gateway.ingest(payload)
+
+        # O chamado foi criado e persistido apesar da falha no envio.
+        self.assertFalse(result.duplicate)
+        self.assertIsNotNone(repo.get(result.ticket.id))
+
+        # O evento ficou marcado como processado: a reentrega não duplica.
+        repetido = gateway.ingest(payload)
+        self.assertTrue(repetido.duplicate)
+        self.assertEqual(repetido.ticket.id, result.ticket.id)
+
+        # O log registra a falha sem telefone nem texto da mensagem.
+        registro = "\n".join(logs.output)
+        self.assertIn("resposta automática não enviada", registro)
+        self.assertNotIn("5513990003001", registro)
+        self.assertNotIn("a rede caiu de novo", registro)
 
 
 if __name__ == "__main__":
