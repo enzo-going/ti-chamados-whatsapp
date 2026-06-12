@@ -59,6 +59,7 @@ class TestProjecao(unittest.TestCase):
                 "assignee",
                 "opened_at",
                 "open_for",
+                "age_minutes",
             },
         )
 
@@ -71,6 +72,7 @@ class TestProjecao(unittest.TestCase):
         self.assertEqual(row.priority, "média")
         self.assertEqual(row.status, "Atribuído")
         self.assertEqual(row.assignee, "Atendente 1")
+        self.assertGreaterEqual(row.age_minutes, 0)
 
     def test_sem_responsavel_mostra_travessao(self):
         service = make_service()
@@ -158,6 +160,48 @@ class TestRenderHtml(unittest.TestCase):
         )
         page = render_dashboard(service.repository.list_open())
         self.assertIn("2 chamados em aberto · 1 de prioridade alta", page)
+
+    def test_metricas_por_categoria_e_status(self):
+        service = make_service()
+        service.handle_message(Message(sender="a", text="impressora sem toner"))
+        service.handle_message(
+            Message(sender="b", text="a rede caiu, ninguém consegue trabalhar")
+        )
+        page = render_dashboard(service.repository.list_open())
+        self.assertIn("Por categoria", page)
+        self.assertIn("Por status", page)
+        self.assertIn("Impressora", page)
+        self.assertIn("Rede", page)
+        self.assertIn("Atribuído", page)
+
+    def test_metricas_nao_vazam_dados_sensiveis(self):
+        service = make_service()
+        ticket = open_ticket(service)
+        page = render_dashboard([ticket])
+        self.assertNotIn(TELEFONE, page)
+        self.assertNotIn(NOME_SOLICITANTE, page)
+        self.assertNotIn("hunter2", page)
+        for trecho in ticket.history:
+            self.assertNotIn(trecho, page)
+
+    def test_chamado_antigo_recebe_destaque_visual(self):
+        service = make_service()
+        now = datetime(2026, 1, 10, 14, 0, tzinfo=timezone.utc)
+        ticket = service.handle_message(Message(sender="a", text="impressora sem toner"))
+        ticket.created_at = now - timedelta(hours=5)
+        page = render_dashboard([ticket], now=now)
+        self.assertIn('class="media antigo"', page)
+        self.assertIn("5h 00min", page)
+
+    def test_chamado_muito_antigo_recebe_destaque_critico(self):
+        service = make_service()
+        now = datetime(2026, 1, 10, 14, 0, tzinfo=timezone.utc)
+        ticket = service.handle_message(
+            Message(sender="a", text="a rede caiu, ninguém consegue trabalhar")
+        )
+        ticket.created_at = now - timedelta(hours=9)
+        page = render_dashboard([ticket], now=now)
+        self.assertIn('class="alta critico"', page)
 
     def test_resumo_singular_sem_alta(self):
         service = make_service()
