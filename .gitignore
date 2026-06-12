@@ -38,3 +38,6 @@ Thumbs.db
 
 # Obsidian (configuração local do cofre — não versionar)
 .obsidian/
+# Arquivos soltos do Obsidian no cofre (Bases/Canvas) — não fazem parte do projeto
+*.base
+*.canvas
