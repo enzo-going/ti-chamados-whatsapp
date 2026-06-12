@@ -40,6 +40,9 @@ navegador. Passo a passo manual, simulação de mensagens e solução de problem
 em [`docs/demo-local.md`](docs/demo-local.md).
 
 ```bash
+# Diagnóstico seguro da configuração local (não exibe valores de variáveis)
+python -m helpdesk.config check
+
 # Pré-voo da demonstração: percorre o fluxo completo em ambiente descartável
 python -m helpdesk.demo check
 
@@ -100,7 +103,7 @@ helpdesk/
 ├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
 ├── demo.py        # demonstração: seed fake, simulação de mensagens e checagem (check)
 └── service.py     # orquestra o fluxo completo
-tests/             # 121 testes (unittest)
+tests/             # 135 testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 demo.ps1           # demo completa em um comando (Windows)
 ```
@@ -161,7 +164,8 @@ primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
 
 ## Próximos passos (planejados)
 
-- [ ] Adaptador de transporte com a **WhatsApp Cloud API** (oficial, sem risco de ban)
+- [ ] Adaptador de transporte com a **WhatsApp Cloud API** (oficial, sem risco
+      de ban) — pré-requisitos locais em [`docs/pre-integracao.md`](docs/pre-integracao.md)
 - [x] Persistência em **SQLite** (Fase 1 concluída; SQLAlchemy fica como opção futura)
 - [x] **Atendentes configuráveis** (JSON local com papéis e ativo/inativo, sem hardcode)
 - [x] **Painel local somente leitura** (`/dashboard`; projeção restrita, base do wallboard)

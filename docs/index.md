@@ -14,6 +14,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 - [Registro de decisões](decisoes.md) — decisões de arquitetura (ADR).
 - [Demonstração local](demo-local.md) — passo a passo para rodar e testar na máquina.
 - [Roteiro de demonstração](roteiro-demo.md) — guia curto de apresentação (~10 min).
+- [Checklist de pré-integração](pre-integracao.md) — o que validar antes de conectar uma linha real (sem credenciais no repositório).
 - [Visão geral (README)](../README.md) — descrição e instruções de uso.
 
 ## Mapa do código
@@ -31,7 +32,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + página HTML |
 | `helpdesk/demo.py` | Demonstração: seed fake, simulação de mensagens e checagem automática (`check`) |
-| `helpdesk/config.py` | Caminhos (banco, quadro de atendentes) via variáveis de ambiente |
+| `helpdesk/config.py` | Caminhos via variáveis de ambiente + checagem segura de configuração (`check`) |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
 | `tests/` | Suíte de testes (unittest) |
 
