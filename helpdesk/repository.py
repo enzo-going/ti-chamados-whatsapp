@@ -311,6 +311,20 @@ class SqliteTicketRepository:
         )
         self._conn.commit()
 
+    # -- manutenção --------------------------------------------------------- #
+    def clear(self) -> None:
+        """Apaga todos os chamados e eventos processados (usado pelo ``--reset``).
+
+        Trabalha via SQL na própria conexão, então funciona mesmo que o arquivo
+        esteja aberto por outro processo (ex.: o servidor da demo) — ao
+        contrário de apagar o arquivo, que o Windows recusa enquanto ele está em
+        uso (``PermissionError``/WinError 32). Como ``next_id()`` é ``MAX(id)+1``,
+        os ids voltam a começar em 1 após a limpeza.
+        """
+        self._conn.execute("DELETE FROM tickets")
+        self._conn.execute("DELETE FROM processed_events")
+        self._conn.commit()
+
     # -- ciclo de vida da conexão ------------------------------------------ #
     def close(self) -> None:
         self._conn.close()

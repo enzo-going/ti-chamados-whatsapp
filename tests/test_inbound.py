@@ -8,6 +8,7 @@ import tempfile
 import threading
 import unittest
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 from helpdesk.http_app import make_server
@@ -56,6 +57,23 @@ class TestParsePayload(unittest.TestCase):
     def test_timestamp_valido(self):
         ev = parse_payload(dict(VALID, timestamp="2026-06-09T12:00:00+00:00"))
         self.assertEqual(ev.message.received_at.year, 2026)
+
+    def test_timestamp_com_fuso_preservado(self):
+        ev = parse_payload(dict(VALID, timestamp="2026-06-09T12:00:00-03:00"))
+        # O instante (UTC) é preservado: 12:00 em -03:00 = 15:00 UTC.
+        self.assertEqual(
+            ev.message.received_at.astimezone(timezone.utc).hour, 15
+        )
+
+    def test_timestamp_sem_fuso_normalizado_para_utc(self):
+        # Regressão: um timestamp "naive" (sem fuso) era devolvido sem tzinfo e
+        # quebrava o cálculo de tempo do painel e a janela de follow-up
+        # ("can't subtract offset-naive and offset-aware"). Agora é assumido UTC.
+        ev = parse_payload(dict(VALID, timestamp="2026-06-09T12:00:00"))
+        self.assertEqual(ev.message.received_at.tzinfo, timezone.utc)
+        # E continua subtraível com um "agora" aware (o que o painel/serviço fazem).
+        delta = datetime.now(timezone.utc) - ev.message.received_at
+        self.assertGreater(delta.total_seconds(), 0)
 
     def test_timestamp_invalido(self):
         with self.assertRaises(InvalidPayload):
