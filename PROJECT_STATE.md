@@ -7,7 +7,7 @@ concentra estado, comandos e checklist do dia a dia.
 ## Estado atual
 
 - **Branch:** `main` (sincronizada com `origin/main`).
-- **Suíte de testes:** 167 testes (unittest), todos verdes.
+- **Suíte de testes:** 177 testes (unittest), todos verdes.
 - **CI:** GitHub Actions em Python 3.10 / 3.11 / 3.12.
 - **Working tree:** limpo, sem pendências de feature em aberto.
 - **Runtime:** Python 3.10+ puro, zero dependências externas.
