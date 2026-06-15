@@ -79,6 +79,20 @@ class TestParsePayload(unittest.TestCase):
         with self.assertRaises(InvalidPayload):
             parse_payload(dict(VALID, timestamp="ontem"))
 
+    def test_payload_nao_e_objeto(self):
+        for bad in (None, "x", 5, []):
+            with self.subTest(payload=bad):
+                with self.assertRaises(InvalidPayload):
+                    parse_payload(bad)
+
+    def test_sender_name_de_tipo_errado(self):
+        with self.assertRaises(InvalidPayload):
+            parse_payload(dict(VALID, sender_name=123))
+
+    def test_timestamp_de_tipo_errado(self):
+        with self.assertRaises(InvalidPayload):
+            parse_payload(dict(VALID, timestamp=123))
+
 
 class TestIdempotenciaMemoria(unittest.TestCase):
     def test_cria_chamado(self):

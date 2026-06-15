@@ -66,6 +66,29 @@ class TestNaoExposicaoDeValores(unittest.TestCase):
             self.assertIn(name, labels)
 
 
+class TestAccessors(unittest.TestCase):
+    """Os accessors leem a variável certa (usados por CloudApiTransport.from_env)."""
+
+    CASOS = (
+        (config.whatsapp_token, config.WHATSAPP_TOKEN_ENV),
+        (config.whatsapp_phone_number_id, config.WHATSAPP_PHONE_NUMBER_ID_ENV),
+        (config.whatsapp_verify_token, config.WHATSAPP_VERIFY_TOKEN_ENV),
+        (config.whatsapp_app_secret, config.WHATSAPP_APP_SECRET_ENV),
+    )
+
+    def test_le_o_valor_quando_definida(self):
+        for func, env in self.CASOS:
+            with self.subTest(env=env):
+                with mock.patch.dict(os.environ, {env: "valor-x"}):
+                    self.assertEqual(func(), "valor-x")
+
+    def test_none_quando_ausente_ou_vazia(self):
+        for func, env in self.CASOS:
+            with self.subTest(env=env):
+                with mock.patch.dict(os.environ, {env: ""}):
+                    self.assertIsNone(func())
+
+
 class TestCoerenciaDaIntegracao(unittest.TestCase):
     """Configuração PARCIAL das 4 variáveis é a cilada do dia da ligação."""
 

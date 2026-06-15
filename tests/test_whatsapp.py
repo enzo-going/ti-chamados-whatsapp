@@ -514,5 +514,69 @@ class TestBestEffortTransport(unittest.TestCase):
         self.assertNotIn("a rede caiu de novo", registro)
 
 
+class TestParserRobustez(unittest.TestCase):
+    """O parser do webhook recebe lixo da plataforma sem quebrar nem vazar.
+
+    Payloads estruturalmente inválidos viram ``InvalidWebhookPayload`` (o
+    chamador responde 400); mensagens individuais malformadas são **ignoradas
+    com um motivo**, sem derrubar o lote (a plataforma espera 200). Em nenhum
+    caso pode escapar uma exceção não tratada.
+    """
+
+    # Estruturalmente inválidos: o formato base não é reconhecível -> 400.
+    ESTRUTURAIS = [None, 0, "texto", [], 123, True, {"entry": "x"}, {"entry": 5}]
+
+    # Conteúdo malformado de qualquer natureza: nunca quebra e não produz
+    # payload (alguns registram motivo, outros apenas resultam em vazio).
+    CONTEUDO_VAZIO = [
+        {"entry": None}, {"entry": []}, {"entry": [None]},
+        {"entry": [{"changes": None}]}, {"entry": [{"changes": [None]}]},
+        {"entry": [{"changes": [{"value": None}]}]},
+        {"entry": [{"changes": [{"value": {}}]}]},
+        {"entry": [{"changes": [{"value": {"messages": "x"}}]}]},
+        {"entry": [{"changes": [{"value": {"messages": [None]}}]}]},
+        {"entry": [{"changes": [{"value": {"messages": [{"id": "a"}]}}]}]},   # sem from
+        {"entry": [{"changes": [{"value": {"messages": [{"from": "5"}]}}]}]},  # sem id
+        {"entry": [{"changes": [{"value": {"messages": [
+            {"id": "a", "from": "5", "type": "image"}]}}]}]},                  # nao-texto
+        {"entry": [{"changes": [{"value": {"messages": [
+            {"id": "a", "from": "5", "type": "text", "text": {"body": "  "}}]}}]}]},  # vazio
+    ]
+
+    # Mensagens reconhecíveis mas não aproveitáveis: ignoradas COM motivo.
+    IGNORADO_COM_MOTIVO = [
+        {"entry": [{"changes": [{"value": {"messages": [{"id": "a"}]}}]}]},   # sem from
+        {"entry": [{"changes": [{"value": {"messages": [
+            {"id": "a", "from": "5", "type": "image"}]}}]}]},                  # nao-texto
+        {"entry": [{"changes": [{"value": {"statuses": [
+            {"id": "x", "status": "read"}]}}]}]},                              # recibo
+    ]
+
+    def test_estruturalmente_invalido_levanta_excecao_tratada(self):
+        for p in self.ESTRUTURAIS:
+            with self.subTest(payload=p):
+                with self.assertRaises(InvalidWebhookPayload):
+                    extract_inbound_payloads(p)
+
+    def test_conteudo_malformado_nunca_quebra_nem_produz_payload(self):
+        for p in self.CONTEUDO_VAZIO:
+            with self.subTest(payload=p):
+                extraction = extract_inbound_payloads(p)  # não pode levantar
+                self.assertEqual(extraction.payloads, [])
+
+    def test_mensagem_reconhecivel_invalida_e_ignorada_com_motivo(self):
+        for p in self.IGNORADO_COM_MOTIVO:
+            with self.subTest(payload=p):
+                extraction = extract_inbound_payloads(p)
+                self.assertEqual(extraction.payloads, [])
+                self.assertTrue(extraction.ignored)
+
+    def test_texto_gigante_e_unicode_sao_aceitos(self):
+        gigante = "Á" * 50000 + " 中文 \U0001F600"
+        payload = webhook_payload(text=gigante, message_id="wamid.grande")
+        (neutral,) = extract_inbound_payloads(payload).payloads
+        self.assertEqual(neutral["text"], gigante)
+
+
 if __name__ == "__main__":
     unittest.main()
