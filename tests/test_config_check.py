@@ -66,6 +66,48 @@ class TestNaoExposicaoDeValores(unittest.TestCase):
             self.assertIn(name, labels)
 
 
+class TestCoerenciaDaIntegracao(unittest.TestCase):
+    """Configuração PARCIAL das 4 variáveis é a cilada do dia da ligação."""
+
+    LABEL = "integração (conjunto de variáveis)"
+
+    def _coerencia(self, env: dict) -> ConfigStep:
+        base = {
+            k: v
+            for k, v in os.environ.items()
+            if k not in INTEGRATION_ENV_VARS
+        }
+        base.update(env)
+        with mock.patch.dict(os.environ, base, clear=True):
+            steps = run_config_check()
+        (step,) = [s for s in steps if s.label == self.LABEL]
+        return step
+
+    def test_nenhuma_definida_e_ok(self):
+        step = self._coerencia({})
+        self.assertTrue(step.ok)
+        self.assertIn("nenhuma definida", step.detail)
+
+    def test_todas_definidas_e_ok(self):
+        step = self._coerencia({name: "x" for name in INTEGRATION_ENV_VARS})
+        self.assertTrue(step.ok)
+        self.assertIn("as 4 definidas", step.detail)
+
+    def test_parcial_falha_e_nomeia_o_que_falta(self):
+        # Define só as duas primeiras: deve falhar citando as duas ausentes.
+        definidas = INTEGRATION_ENV_VARS[:2]
+        faltam = INTEGRATION_ENV_VARS[2:]
+        step = self._coerencia({name: "x" for name in definidas})
+        self.assertFalse(step.ok)
+        for name in faltam:
+            self.assertIn(name, step.detail)
+
+    def test_parcial_nao_vaza_valores(self):
+        step = self._coerencia({INTEGRATION_ENV_VARS[0]: SENTINELA})
+        self.assertFalse(step.ok)
+        self.assertNotIn(SENTINELA, step.detail)
+
+
 class TestChecagemSemEfeitosColaterais(unittest.TestCase):
     def test_checagem_nao_cria_o_banco(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -188,7 +230,10 @@ class TestRelatorioCompleto(unittest.TestCase):
             for k, v in os.environ.items()
             if k not in {DB_PATH_ENV, ATTENDANTS_PATH_ENV}
         }
-        env[INTEGRATION_ENV_VARS[0]] = SENTINELA
+        # Define as 4 (configuração completa) para o comando terminar com sucesso;
+        # o foco do teste é que nenhum valor vaze na saída impressa.
+        for name in INTEGRATION_ENV_VARS:
+            env[name] = SENTINELA
         with mock.patch.dict(
             os.environ, env, clear=True
         ), contextlib.redirect_stdout(buffer):
