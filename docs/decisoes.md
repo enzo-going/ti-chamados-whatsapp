@@ -248,6 +248,86 @@ Um teste de regressão fixa o cenário: com uma conexão ociosa aberta, um POST
 deve responder normalmente. O CLI da demonstração também passou a tratar erros
 de conexão com mensagem curta e orientação (sem traceback em uso normal).
 
+## 14. Borda da integração de mensagens (Cloud API), testável sem rede
+
+Concretização da Fase 3 **sem conectar nada**: `helpdesk/whatsapp.py` implementa
+as peças que a integração oficial exige, todas exercitadas por testes com HTTP
+fake e sem credenciais. Escolhas:
+
+- **API oficial (Cloud API), não cliente não-oficial.** Baileys/whatsapp-web.js
+  e similares violam os termos e arriscam banir o número; a Cloud API é a via
+  suportada. A contrapartida (janela de 24h, formato de payload) é aceita.
+- **Recebimento separado em três responsabilidades puras:** verificação do
+  webhook (`verify_webhook`, handshake GET com comparação de token em tempo
+  constante), validação de assinatura (`valid_signature`, HMAC-SHA256 do corpo
+  bruto) e conversão (`extract_inbound_payloads`, payload da plataforma →
+  payload neutro do `/inbound`). Cada uma é função pura, testável isolada.
+- **Reaproveita a idempotência existente:** o id da mensagem da plataforma vira
+  o `event_id`, então reentregas (a plataforma garante "ao menos uma vez") não
+  duplicam chamado. Recibos de status e tipos não-texto são ignorados com um
+  **motivo** (nunca com conteúdo), e o webhook responde 200 mesmo assim —
+  formato que a plataforma espera para não reentregar.
+- **Envio como `CloudApiTransport` com HTTP injetável.** A função HTTP entra
+  pelo construtor: testes passam um fake e nenhuma chamada externa acontece. O
+  token só entra no cabeçalho `Authorization` e nunca aparece em `repr`/erros.
+- **Fail closed.** As rotas `/webhook` respondem 503 sem `WHATSAPP_VERIFY_TOKEN`/
+  `WHATSAPP_APP_SECRET`, e 403 sem assinatura válida. O envio real só é ativado
+  por `--transport cloud-api`, que exige as variáveis e falha citando apenas os
+  **nomes** ausentes. O servidor continua ligado só em `127.0.0.1`; a exposição
+  pública (túnel HTTPS) é decisão à parte, fora do código.
+- **Escopo consciente — janela de 24h.** Hoje todo envio é **reativo** (resposta
+  a uma mensagem recebida), portanto sempre dentro da janela de 24h da
+  plataforma; não há, por ora, tratamento de *templates* para envio ativo fora
+  da janela. Quando houver mensagem proativa (ex.: notificar prioridade alta),
+  isso entra junto.
+
+A conexão real continua **bloqueada por decisão** (estratégia do número); o
+roteiro do dia da validação está em [pré-integração](pre-integracao.md).
+
+## 15. Separar "processar o evento" de "entregar a resposta" (resiliência) + log mínimo
+
+**Contexto:** na borda real, o envio da resposta automática pode falhar (API
+instável, token expirado) **depois** de o chamado já ter sido criado e
+persistido. Se essa falha subisse até a rota, o webhook responderia erro e a
+plataforma **reentregaria o evento em laço**, repetindo follow-ups e tentativas
+de envio.
+
+**Decisão:** o servidor embrulha o transporte em um `BestEffortTransport`. A
+falha de envio é registrada em log e **não** interrompe o fluxo: o chamado fica
+gravado, o evento é marcado como processado (a reentrega não duplica) e a rota
+responde 200. Registrar o pedido nunca depende de a resposta ser entregue.
+
+Junto entrou **observabilidade mínima**: log operacional nas rotas (evento novo
+vs. reentrega com número do chamado, contagens do webhook, payload recusado,
+assinatura inválida). Regra firme: telefone, nome do solicitante e texto da
+mensagem **nunca** entram no log (há teste garantindo). O log é ligado apenas no
+executável (`basicConfig` no `main`), então importar o módulo não altera o
+logging de quem usa o pacote como biblioteca.
+
+## 16. Robustez de horário e de reset para a borda real
+
+Dois ajustes pequenos que evitam falhas chatas quando a entrada deixa de ser só
+a demonstração:
+
+- **Timestamp sem fuso é assumido como UTC.** A entrada aceita um `timestamp`
+  ISO opcional; sem fuso, ele virava um `datetime` "naive" e quebrava o cálculo
+  de tempo do painel e a janela de follow-up (não dá para subtrair *naive* de
+  *aware*). Como toda a base trabalha em UTC e o webhook entrega com fuso,
+  normalizar o ausente para UTC é a escolha consistente.
+- **`demo seed --reset` limpa via SQL, não apagando o arquivo.** Apagar o
+  `.sqlite3` falhava no Windows enquanto o servidor o mantinha aberto
+  (`PermissionError`/WinError 32). Um `clear()` no repositório esvazia as
+  tabelas pela própria conexão, funcionando com o banco em uso.
+
+## 17. Painel: leitura rápida em tela compartilhada (extensão da decisão 12)
+
+Para o cenário de wallboard, o painel ganhou **resumos por categoria e por
+status** (contagens) e **destaque visual de idade** (borda amarela a partir de
+~4h, vermelha a partir de ~8h). São **heurísticas de leitura**, não um SLA
+formal. A projeção restrita da decisão 12 é mantida intacta: as contagens e o
+destaque derivam apenas de campos já projetados, sem trazer telefone, nome do
+solicitante ou texto — com teste de não-vazamento cobrindo o caso.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)
