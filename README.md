@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)
 ![Tests](https://img.shields.io/badge/Tests-unittest-brightgreen?style=flat)
 ![Dependencies](https://img.shields.io/badge/Dependencies-none-brightgreen?style=flat)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
 
 Núcleo de um **helpdesk de TI** que transforma mensagens de WhatsApp em chamados
 organizados — pensado para o cenário de um setor de TI que atende funcionários
@@ -174,7 +175,7 @@ primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
 - [x] Persistência em **SQLite** (Fase 1 concluída; SQLAlchemy fica como opção futura)
 - [x] **Atendentes configuráveis** (JSON local com papéis e ativo/inativo, sem hardcode)
 - [x] **Painel local somente leitura** (`/dashboard`; projeção restrita, base do wallboard)
-- [ ] Painel web (Flask) para os atendentes verem e **tratarem** os chamados
+- [ ] Painel web para os atendentes verem e **tratarem** os chamados
 - [ ] Métricas: tempo de resposta, chamados por categoria, carga por atendente
 - [ ] Notificação aos atendentes quando um chamado de prioridade alta entra
 
@@ -185,3 +186,9 @@ primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
 Ver [`docs/decisoes.md`](docs/decisoes.md) para o registro de decisões
 (por que projeto próprio em vez de fork, por que transporte plugável, etc.) e
 [`docs/roadmap.md`](docs/roadmap.md) para o plano incremental por fases.
+
+---
+
+## Licença
+
+Distribuído sob a licença MIT — ver [`LICENSE`](LICENSE).
