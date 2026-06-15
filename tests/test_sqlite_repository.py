@@ -159,6 +159,19 @@ class TestPersistencia(SqliteRepoTestCase):
         self.assertIsNotNone(recarregado.closed_at.tzinfo)
 
 
+class TestContextManager(unittest.TestCase):
+    def test_with_fecha_a_conexao(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = str(Path(tmpdir) / "ctx.sqlite3")
+            with SqliteTicketRepository(db) as repo:
+                make_ticket(repo, "a", Status.ABERTO)
+                self.assertEqual(len(repo.all()), 1)
+            # Após o with, a conexão está fechada: usá-la deve falhar.
+            import sqlite3
+            with self.assertRaises(sqlite3.ProgrammingError):
+                repo.all()
+
+
 class TestClear(SqliteRepoTestCase):
     def test_clear_esvazia_e_reinicia_ids(self):
         make_ticket(self.repo, "a", Status.ABERTO)

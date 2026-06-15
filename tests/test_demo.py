@@ -162,6 +162,37 @@ class TestSendMessage(unittest.TestCase):
         ids = {r["ticket_id"] for r in resultados.values()}
         self.assertEqual(len(ids), 5)  # remetentes distintos, chamados distintos
 
+    def test_mesmo_evento_concorrente_nao_duplica(self):
+        # Garantia crítica para a integração: a plataforma reentrega eventos
+        # ("ao menos uma vez"), às vezes em paralelo. O mesmo event_id disparado
+        # por várias threads deve gerar UM chamado — exatamente um "novo", o
+        # resto "duplicate" — sem corrida.
+        resultados: list[dict] = []
+        erros: list[Exception] = []
+        lock = threading.Lock()
+
+        def enviar() -> None:
+            try:
+                r = send_message(
+                    "evento reentregue", sender="5513990000900",
+                    base_url=self.base_url, event_id="evt-concorrente",
+                )
+                with lock:
+                    resultados.append(r)
+            except Exception as exc:  # noqa: BLE001
+                erros.append(exc)
+
+        threads = [threading.Thread(target=enviar) for _ in range(16)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=15)
+        self.assertEqual(erros, [])
+        novos = [r for r in resultados if not r["duplicate"]]
+        ids = {r["ticket_id"] for r in resultados}
+        self.assertEqual(len(novos), 1, "deve haver exatamente um chamado novo")
+        self.assertEqual(len(ids), 1, "todas as respostas apontam o mesmo chamado")
+
 
 class TestServidorComSqliteEmThreads(unittest.TestCase):
     """O servidor com threads precisa conseguir usar o repositório SQLite."""

@@ -159,6 +159,13 @@ class TestLifecycle(unittest.TestCase):
         with self.assertRaises(ValueError):
             HelpdeskService(transport=FakeTransport(), attendants=[])
 
+    def test_operacao_em_chamado_inexistente_levanta_keyerror(self):
+        service, _ = make_service()
+        for op in (service.start_progress, service.resolve, service.close):
+            with self.subTest(op=op.__name__):
+                with self.assertRaises(KeyError):
+                    op(9999)
+
 
 class TestActiveRoster(unittest.TestCase):
     """Rodízio com ativos/inativos: inativo não recebe novas atribuições."""
