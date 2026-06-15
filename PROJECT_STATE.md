@@ -7,7 +7,8 @@ concentra estado, comandos e checklist do dia a dia.
 ## Estado atual
 
 - **Branch:** `main` (sincronizada com `origin/main`).
-- **Suíte de testes:** 177 testes (unittest), todos verdes.
+- **Suíte de testes:** unittest, toda verde (a contagem cresce a cada PR; rode
+  `python -m unittest discover -s tests` para o número atual).
 - **CI:** GitHub Actions em Python 3.10 / 3.11 / 3.12.
 - **Working tree:** limpo, sem pendências de feature em aberto.
 - **Runtime:** Python 3.10+ puro, zero dependências externas.
@@ -84,10 +85,10 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
   supervisionada).
 - `helpdesk/config.py`: accessors das variáveis da integração
   (`whatsapp_token()` etc.) — valores continuam nunca aparecendo em saída.
-- `tests/test_whatsapp.py`: 32 testes — handshake, assinatura, parser
-  (status/tipos ignorados sem vazar conteúdo), idempotência por id de
-  mensagem, transporte sem rede e token fora de `repr`/erros, rotas de ponta
-  a ponta em porta efêmera.
+- `tests/test_whatsapp.py`: handshake, assinatura, parser (status/tipos
+  ignorados sem vazar conteúdo), idempotência por id de mensagem, transporte
+  sem rede e token fora de `repr`/erros, rotas de ponta a ponta em porta
+  efêmera, e a resiliência de envio (`BestEffortTransport`).
 - `docs/pre-integracao.md`: seção da borda implementada + roteiro do dia da
   validação com número de teste.
 
