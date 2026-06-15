@@ -175,6 +175,34 @@ def _check_integration_vars() -> list[ConfigStep]:
     return steps
 
 
+def _check_integration_coherence() -> ConfigStep:
+    """Avisa sobre configuração PARCIAL da integração (cilada do dia da ligação).
+
+    As quatro variáveis funcionam como um conjunto: definir só algumas é quase
+    sempre engano (ex.: sem ``WHATSAPP_VERIFY_TOKEN``/``WHATSAPP_APP_SECRET`` as
+    rotas ``/webhook`` respondem 503). O passo só reporta **nomes**, nunca
+    valores.
+    """
+    label = "integração (conjunto de variáveis)"
+    definidas = [name for name in INTEGRATION_ENV_VARS if os.environ.get(name)]
+    if not definidas:
+        return ConfigStep(label, True, "nenhuma definida — integração não iniciada (ok)")
+    if len(definidas) == len(INTEGRATION_ENV_VARS):
+        return ConfigStep(
+            label,
+            True,
+            "as 4 definidas — pronto para o teste supervisionado "
+            "(--transport cloud-api)",
+        )
+    faltam = [name for name in INTEGRATION_ENV_VARS if not os.environ.get(name)]
+    return ConfigStep(
+        label,
+        False,
+        "configuração PARCIAL: faltam " + ", ".join(faltam) + " — defina as 4 "
+        "ou nenhuma (sem VERIFY_TOKEN/APP_SECRET, as rotas /webhook ficam 503)",
+    )
+
+
 def run_config_check() -> list[ConfigStep]:
     """Checagem completa da configuração local, sem efeitos colaterais.
 
@@ -183,6 +211,7 @@ def run_config_check() -> list[ConfigStep]:
     """
     steps = [_check_database(), _check_attendants(), _check_dotenv()]
     steps.extend(_check_integration_vars())
+    steps.append(_check_integration_coherence())
     return steps
 
 

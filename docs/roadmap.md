@@ -141,12 +141,31 @@ Pequenas melhorias de domínio, independentes do plano por fases:
 
 ## Decisões em aberto (suas)
 
-Itens que **param o avanço** das fases correspondentes até sua definição:
+Itens que **param o avanço** das fases correspondentes até sua definição.
 
-1. **Número do WhatsApp** (bloqueia Fase 3): número novo dedicado na Cloud API,
-   cliente não-oficial no número atual (risco de ban / ToS), ou decidir depois.
-   _Status atual: decidir depois — sem integração real por enquanto._
-2. **Interface dos atendentes** (Fase 4): painel web ou comandos por WhatsApp.
-   _Status atual: decidir depois._
+### 1. Estratégia do número (bloqueia a Fase 3)
 
-Ver também: [decisões](decisoes.md) · [README](../README.md)
+O código está pronto para a Cloud API oficial; falta definir **qual número** ela
+vai usar. Opções realistas, com trade-offs:
+
+| Opção | Prós | Contras |
+|---|---|---|
+| **A. Número novo dedicado na Cloud API** (recomendado p/ produção) | Oficial, sem risco de ban; isola o atendimento de números pessoais/da empresa; quem administra é o setor | Precisa de um número/chip novo e do cadastro na conta Business da Meta |
+| **B. Migrar o número atual do setor para a Cloud API** | Mantém o número que os funcionários já conhecem | Ao entrar na Cloud API, o número **deixa de funcionar no app comum do WhatsApp** (a migração é definitiva enquanto estiver na API); ninguém mais pode usar aquele número no celular |
+| **C. Cliente não-oficial (Baileys/whatsapp-web.js) no número atual** | "Funciona" sem cadastro | **Descartada**: viola os termos do WhatsApp e arrisca **banir** o número (ver [decisões](decisoes.md), decisão 1) |
+
+**Caminho recomendado, que adia o compromisso:** a Cloud API oferece um
+**número de teste gratuito** ao criar o app na Meta. Dá para fazer **toda a
+validação supervisionada** (roteiro em [pré-integração](pre-integracao.md)) com
+esse número de teste — sem comprometer nenhum número real — e só então decidir
+entre **A** e **B** para produção.
+
+_Status atual: a decidir. Sem integração real por enquanto._
+
+### 2. Interface dos atendentes (Fase 4)
+
+Painel web (atendente trata o chamado, não só lê) **ou** comandos por WhatsApp.
+_Status atual: a decidir._
+
+Ver também: [decisões](decisoes.md) · [pré-integração](pre-integracao.md) ·
+[README](../README.md)
