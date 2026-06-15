@@ -83,10 +83,12 @@ efeito. O comando imprime o número do chamado e a categoria detectada.
   um atendente em rodízio e alguns avançam no ciclo de vida (em andamento,
   resolvido, fechado). Nada é inserido "por fora".
 - **O painel** (`/dashboard`) lista só os chamados **em aberto** (aberto,
-  atribuído, em andamento), ordenados por prioridade e idade. Ele recebe uma
-  **projeção restrita**: número, categoria, prioridade, status, responsável,
-  horário de abertura e tempo em aberto. Telefone, nome do solicitante e texto
-  das mensagens ficam fora por construção (há testes garantindo).
+  atribuído, em andamento), ordenados por prioridade e idade, com **resumos por
+  categoria e por status** e **destaque de chamados antigos** (borda
+  amarela/vermelha conforme o tempo em aberto). Ele recebe uma **projeção
+  restrita**: número, categoria, prioridade, status, responsável, horário de
+  abertura e tempo em aberto. Telefone, nome do solicitante e texto das
+  mensagens ficam fora por construção (há testes garantindo).
 - **`send`** envia um payload JSON ao `POST /inbound` — a mesma entrada que uma
   integração real usaria. Por isso a demonstração exibe os comportamentos
   centrais: triagem, rodízio, follow-up (mesma pessoa, mesmo problema → mesmo

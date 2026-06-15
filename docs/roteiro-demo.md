@@ -33,9 +33,12 @@ Antes: `.\demo.ps1` (painel abre sozinho no navegador).
 
 1. **Painel na tela.** Mostrar as colunas: número, categoria, prioridade,
    status, responsável, tempo aberto. Apontar: alta prioridade no topo,
-   destacada; o resumo de contagem; o auto-refresh.
-   > "É isto que ficaria numa TV da sala: visão imediata do que está pendente
-   > e com quem está — sem expor telefone nem o conteúdo das conversas."
+   destacada; os **resumos por categoria e por status**; o **destaque de
+   chamados antigos** (borda amarela/vermelha por tempo em aberto); o
+   auto-refresh.
+   > "É isto que ficaria numa TV da sala: visão imediata do que está pendente,
+   > com quem está e o que está envelhecendo — sem expor telefone nem o
+   > conteúdo das conversas."
 2. **Mensagem chegando.** Em outra janela:
    ```powershell
    python -m helpdesk.demo send "a impressora do RH parou de novo"
