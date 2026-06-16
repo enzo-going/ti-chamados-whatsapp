@@ -286,7 +286,9 @@ fake e sem credenciais. Escolhas:
   isso entra junto.
 
 A conexão real continua **bloqueada por decisão** (estratégia do número); o
-roteiro do dia da validação está em [pré-integração](pre-integracao.md).
+roteiro do dia da validação está em [pré-integração](pre-integracao.md). O porquê
+de este desenho — Cloud API oficial, reativo e interno — ficar no lado de **baixo
+risco de banimento** está em [risco de banimento](riscos-banimento.md).
 
 ## 15. Separar "processar o evento" de "entregar a resposta" (resiliência) + log mínimo
 
