@@ -111,4 +111,4 @@ ordem; nenhum deles entra no repositório:
   exposição é temporária, via túnel, e só durante a validação.
 
 Ver também: [roadmap](roadmap.md) · [demo local](demo-local.md) ·
-[índice da documentação](index.md)
+[risco de banimento](riscos-banimento.md) · [índice da documentação](index.md)
