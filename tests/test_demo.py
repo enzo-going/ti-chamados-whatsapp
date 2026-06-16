@@ -280,6 +280,51 @@ class TestCliCheck(unittest.TestCase):
         self.assertNotIn("Traceback", combinado)
 
 
+class TestCliClear(unittest.TestCase):
+    """`demo clear` esvazia o banco da demonstração (todos os chamados)."""
+
+    raiz = Path(__file__).resolve().parent.parent
+
+    def _rodar(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, "-m", "helpdesk.demo", *args],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(self.raiz), timeout=60,
+        )
+
+    def test_clear_esvazia_o_banco(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = str(Path(tmpdir) / "demo-clear.sqlite3")
+            seed = self._rodar("seed", "--db", db)
+            self.assertEqual(seed.returncode, 0, seed.stdout + seed.stderr)
+
+            repo = SqliteTicketRepository(db)
+            try:
+                self.assertGreater(len(repo.all()), 0)  # tem o que limpar
+            finally:
+                repo.close()
+
+            limpar = self._rodar("clear", "--db", db)
+            self.assertEqual(limpar.returncode, 0, limpar.stdout + limpar.stderr)
+            self.assertIn("esvaziado", limpar.stdout)
+
+            repo = SqliteTicketRepository(db)
+            try:
+                self.assertEqual(repo.all(), [])
+                self.assertEqual(repo.next_id(), 1)  # ids recomeçam
+            finally:
+                repo.close()
+
+    def test_clear_em_banco_inexistente_orienta_sem_traceback(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = str(Path(tmpdir) / "nao-existe.sqlite3")
+            saida = self._rodar("clear", "--db", db)
+            combinado = (saida.stdout or "") + (saida.stderr or "")
+            self.assertEqual(saida.returncode, 1)
+            self.assertNotIn("Traceback", combinado)
+            self.assertIn("não existe", combinado)
+
+
 class TestCliAmigavel(unittest.TestCase):
     """`demo send` nunca deve mostrar traceback bruto em uso normal."""
 

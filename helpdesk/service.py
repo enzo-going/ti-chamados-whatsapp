@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from helpdesk import replies, triage
-from helpdesk.models import Attendant, Message, Status, Ticket
+from helpdesk.models import Attendant, Message, ServiceMode, Status, Ticket
 from helpdesk.repository import InMemoryTicketRepository, TicketRepository
 from helpdesk.transport import MessagingTransport
 
@@ -90,6 +90,40 @@ class HelpdeskService:
         ticket.status = Status.FECHADO
         ticket.touch("Fechado.")
         ticket.closed_at = ticket.updated_at
+        self.repository.update(ticket)
+        return ticket
+
+    def set_attendance(
+        self,
+        ticket_id: int,
+        *,
+        mode: ServiceMode | None = None,
+        location: str | None = None,
+    ) -> Ticket:
+        """Define o **local/modo de atendimento** do chamado.
+
+        Pensado para ser acionado por um atendente (interface da Fase 4), não
+        pela mensagem do funcionário. ``mode`` diz se o atendimento é presencial
+        ou remoto; ``location`` é texto livre (sala, setor, evento) e costuma
+        acompanhar o presencial. Atualiza só o que for informado, registra a
+        mudança no histórico e persiste. Não altera status nem responsável.
+        """
+        if mode is None and location is None:
+            raise ValueError("Informe ao menos 'mode' ou 'location'.")
+        ticket = self._require(ticket_id)
+        if mode is not None:
+            ticket.service_mode = mode
+        if location is not None:
+            ticket.location = location
+
+        if ticket.service_mode is ServiceMode.REMOTO:
+            nota = "Atendimento definido como remoto."
+        elif ticket.service_mode is ServiceMode.PRESENCIAL:
+            onde = f" em {ticket.location}" if ticket.location else ""
+            nota = f"Atendimento presencial{onde}."
+        else:
+            nota = f"Local de atendimento: {ticket.location}."
+        ticket.touch(nota)
         self.repository.update(ticket)
         return ticket
 

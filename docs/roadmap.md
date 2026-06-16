@@ -140,6 +140,12 @@ Pequenas melhorias de domínio, independentes do plano por fases:
   atendentes, seed, servidor, triagem, follow-up, idempotência e painel — em
   ambiente descartável (banco temporário + porta efêmera) e aponta o passo que
   falhar. Pensada como pré-voo de apresentações.
+- **Local/modo de atendimento** (`presencial`/`remoto` + local livre): campos no
+  `Ticket`, setter no serviço (`set_attendance`) e coluna **Local** no painel.
+  Marcar pela interface fica para a Fase 4; o seed já mostra exemplos. Detalhes
+  em [decisões](decisoes.md), decisão 18.
+- **Esvaziar o banco da demonstração** (`python -m helpdesk.demo clear`): zera
+  todos os chamados sem repovoar (decisão 19).
 
 ## Decisões em aberto (suas)
 

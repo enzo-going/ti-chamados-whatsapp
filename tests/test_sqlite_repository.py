@@ -14,7 +14,16 @@ import unittest
 from datetime import timedelta
 from pathlib import Path
 
-from helpdesk.models import Attendant, Category, Message, Priority, Status, Ticket, _now
+from helpdesk.models import (
+    Attendant,
+    Category,
+    Message,
+    Priority,
+    ServiceMode,
+    Status,
+    Ticket,
+    _now,
+)
 from helpdesk.repository import SqliteTicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
@@ -107,7 +116,7 @@ class TestContract(SqliteRepoTestCase):
         self.assertIn("nota nova", recarregado.history)
 
     def test_schema_version_carimbada(self):
-        self.assertEqual(self.repo.schema_version(), 2)
+        self.assertEqual(self.repo.schema_version(), 3)
 
     def test_eventos_processados(self):
         self.assertIsNone(self.repo.seen_event("e1"))
@@ -157,6 +166,69 @@ class TestPersistencia(SqliteRepoTestCase):
         recarregado = self.repo.get(t.id)
         self.assertEqual(recarregado.closed_at, original)
         self.assertIsNotNone(recarregado.closed_at.tzinfo)
+
+    def test_round_trip_preserva_local_e_modo_de_atendimento(self):
+        t = make_ticket(self.repo, "a", Status.ATRIBUIDO)
+        t.service_mode = ServiceMode.PRESENCIAL
+        t.location = "Sala 203"
+        self.repo.update(t)
+        recarregado = self.repo.get(t.id)
+        self.assertEqual(recarregado.service_mode, ServiceMode.PRESENCIAL)
+        self.assertEqual(recarregado.location, "Sala 203")
+
+    def test_chamado_sem_atendimento_volta_com_campos_none(self):
+        t = make_ticket(self.repo, "a", Status.ABERTO)
+        recarregado = self.repo.get(t.id)
+        self.assertIsNone(recarregado.service_mode)
+        self.assertIsNone(recarregado.location)
+
+
+class TestMigracao(unittest.TestCase):
+    """Banco de um schema anterior (sem service_mode/location) é migrado ao abrir."""
+
+    def test_adiciona_colunas_de_atendimento_em_banco_antigo(self):
+        import sqlite3
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = str(Path(tmpdir) / "antigo.sqlite3")
+            # Tabela tickets no formato anterior ao v3 (sem as colunas novas),
+            # com uma linha já gravada — simula um banco em uso.
+            conn = sqlite3.connect(db_path)
+            conn.executescript(
+                """
+                CREATE TABLE tickets (
+                    id INTEGER PRIMARY KEY, sender TEXT NOT NULL, sender_name TEXT,
+                    category TEXT NOT NULL, priority TEXT NOT NULL, subject TEXT NOT NULL,
+                    status TEXT NOT NULL, assignee_id TEXT, assignee_name TEXT,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT,
+                    history TEXT NOT NULL DEFAULT '[]'
+                );
+                """
+            )
+            agora = _now().isoformat()
+            conn.execute(
+                "INSERT INTO tickets (id, sender, category, priority, subject, "
+                "status, created_at, updated_at) "
+                "VALUES (1, 'a', 'rede', 'media', 'x', 'aberto', ?, ?)",
+                (agora, agora),
+            )
+            conn.commit()
+            conn.close()
+
+            # Abrir com o repositório atual migra o schema e lê a linha antiga.
+            repo = SqliteTicketRepository(db_path)
+            try:
+                self.assertEqual(repo.schema_version(), 3)
+                antigo = repo.get(1)
+                self.assertIsNotNone(antigo)
+                self.assertIsNone(antigo.service_mode)
+                self.assertIsNone(antigo.location)
+                # A coluna nova aceita escrita normalmente após a migração.
+                antigo.service_mode = ServiceMode.REMOTO
+                repo.update(antigo)
+                self.assertEqual(repo.get(1).service_mode, ServiceMode.REMOTO)
+            finally:
+                repo.close()
 
 
 class TestContextManager(unittest.TestCase):

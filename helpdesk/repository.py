@@ -17,7 +17,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Protocol
 
-from helpdesk.models import Attendant, Category, Priority, Status, Ticket
+from helpdesk.models import Attendant, Category, Priority, ServiceMode, Status, Ticket
 
 
 class TicketRepository(Protocol):
@@ -124,7 +124,9 @@ CREATE TABLE IF NOT EXISTS tickets (
     created_at    TEXT    NOT NULL,
     updated_at    TEXT    NOT NULL,
     closed_at     TEXT,
-    history       TEXT    NOT NULL DEFAULT '[]'
+    history       TEXT    NOT NULL DEFAULT '[]',
+    service_mode  TEXT,
+    location      TEXT
 );
 
 -- Idempotência: registra os eventos de entrada já processados, para que a mesma
@@ -139,7 +141,8 @@ CREATE TABLE IF NOT EXISTS processed_events (
 # Versão atual do schema. Gancho para migrações futuras: ao alterar o schema,
 # subir este número e migrar bancos com user_version menor antes de usá-los.
 # v2: adiciona a tabela processed_events (idempotência da entrada).
-_SCHEMA_VERSION = 2
+# v3: adiciona service_mode e location aos chamados (local/modo de atendimento).
+_SCHEMA_VERSION = 3
 
 # Status considerados "fechados" para fins de reabertura/listagem.
 _CLOSED_STATUSES = (Status.RESOLVIDO.value, Status.FECHADO.value)
@@ -165,6 +168,9 @@ def _row_to_ticket(row: sqlite3.Row) -> Ticket:
     assignee = None
     if row["assignee_id"] is not None:
         assignee = Attendant(id=row["assignee_id"], name=row["assignee_name"])
+    service_mode = (
+        ServiceMode(row["service_mode"]) if row["service_mode"] is not None else None
+    )
     return Ticket(
         id=row["id"],
         sender=row["sender"],
@@ -178,6 +184,8 @@ def _row_to_ticket(row: sqlite3.Row) -> Ticket:
         updated_at=_iso_to_dt(row["updated_at"]),
         closed_at=_iso_to_dt(row["closed_at"]),
         history=json.loads(row["history"]),
+        service_mode=service_mode,
+        location=row["location"],
     )
 
 
@@ -202,10 +210,29 @@ class SqliteTicketRepository:
         # executescript permite múltiplos CREATE TABLE; IF NOT EXISTS torna a
         # criação idempotente e migra bancos antigos (cria tabelas que faltam).
         self._conn.executescript(_SCHEMA)
+        # CREATE TABLE IF NOT EXISTS não adiciona colunas a uma tabela que já
+        # existe — bancos anteriores ao v3 precisam de ALTER TABLE explícito.
+        self._migrate()
         # PRAGMA não aceita parâmetro vinculado (?); interpolamos uma constante
         # inteira controlada por nós, então não há risco de injeção.
         self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Adiciona colunas que faltam em bancos criados por schemas anteriores.
+
+        Idempotente: consulta as colunas atuais e só faz ``ALTER TABLE`` para as
+        ausentes. As colunas novas são nuláveis, então linhas antigas ficam com
+        ``NULL`` (sem modo/local definido) sem precisar de backfill.
+        """
+        existing = {
+            row["name"]
+            for row in self._conn.execute("PRAGMA table_info(tickets)").fetchall()
+        }
+        if "service_mode" not in existing:
+            self._conn.execute("ALTER TABLE tickets ADD COLUMN service_mode TEXT")
+        if "location" not in existing:
+            self._conn.execute("ALTER TABLE tickets ADD COLUMN location TEXT")
 
     def schema_version(self) -> int:
         """Versão do schema gravada no banco (PRAGMA user_version)."""
@@ -217,8 +244,9 @@ class SqliteTicketRepository:
             """
             INSERT INTO tickets (
                 id, sender, sender_name, category, priority, subject, status,
-                assignee_id, assignee_name, created_at, updated_at, closed_at, history
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                assignee_id, assignee_name, created_at, updated_at, closed_at,
+                history, service_mode, location
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (ticket.id, *self._values(ticket)),
         )
@@ -230,7 +258,8 @@ class SqliteTicketRepository:
             UPDATE tickets SET
                 sender = ?, sender_name = ?, category = ?, priority = ?,
                 subject = ?, status = ?, assignee_id = ?, assignee_name = ?,
-                created_at = ?, updated_at = ?, closed_at = ?, history = ?
+                created_at = ?, updated_at = ?, closed_at = ?, history = ?,
+                service_mode = ?, location = ?
             WHERE id = ?
             """,
             (*self._values(ticket), ticket.id),
@@ -354,4 +383,6 @@ class SqliteTicketRepository:
             _dt_to_iso(ticket.updated_at),
             _dt_to_iso(ticket.closed_at),
             json.dumps(ticket.history),
+            ticket.service_mode.value if ticket.service_mode is not None else None,
+            ticket.location,
         )

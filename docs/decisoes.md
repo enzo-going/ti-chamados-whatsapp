@@ -328,6 +328,39 @@ formal. A projeção restrita da decisão 12 é mantida intacta: as contagens e 
 destaque derivam apenas de campos já projetados, sem trazer telefone, nome do
 solicitante ou texto — com teste de não-vazamento cobrindo o caso.
 
+## 18. Local/modo de atendimento (presencial × remoto)
+
+Alguns chamados se resolvem **à distância**; outros exigem ir a uma **sala,
+setor ou evento** específico. Para registrar isso, o `Ticket` ganhou dois campos
+opcionais: `service_mode` (`ServiceMode`: `presencial`/`remoto`) e `location`
+(texto livre — ex.: "Sala 203", "Recepção", "Auditório"). Escolhas:
+
+- **Metadado operacional, não dado do solicitante.** Define *para onde o
+  atendente vai*, então é definido por um **atendente** (`set_attendance` no
+  serviço), não inferido da mensagem do funcionário. Por isso entra na **projeção
+  do painel** (ajuda o wallboard: "para onde preciso ir") sem ferir a privacidade
+  da decisão 8 — não é telefone, nome nem texto do solicitante.
+- **Texto livre para o local, enum só para o modo.** Salas/eventos variam demais
+  para um enum; já presencial/remoto é uma escolha fechada e útil para filtros
+  futuros. `location` costuma acompanhar o presencial, mas os campos são
+  independentes (um pode existir sem o outro).
+- **Migração de schema (v3) idempotente.** As duas colunas são nuláveis e
+  adicionadas por `ALTER TABLE` apenas quando faltam (bancos anteriores ao v3),
+  sem backfill — chamados antigos ficam "sem definição". Há teste de migração de
+  um banco no formato antigo.
+- **Sem ajuste interativo ao vivo por enquanto.** O setter já existe e é testado;
+  a forma de acioná-lo em produção (atendente marcando pela interface) entra com
+  a **Fase 4**. Na demonstração, o `seed` já marca alguns exemplos para o painel
+  exibir a coluna **Local** preenchida.
+
+## 19. Comando de demonstração para esvaziar o banco
+
+`python -m helpdesk.demo clear [--db ...]` apaga **todos** os chamados sem
+recriar o roteiro (diferente do `seed --reset`, que limpa e repovoa). Reaproveita
+o `SqliteTicketRepository.clear()` (limpeza via SQL, funciona com o servidor da
+demo aberto — decisão 16) e os ids voltam a começar em `#1`. Pensado para zerar o
+painel durante uma apresentação ou teste.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

@@ -21,7 +21,7 @@ from helpdesk.dashboard import (
 )
 from helpdesk.http_app import make_server
 from helpdesk.inbound import MessageGateway
-from helpdesk.models import Attendant, Message
+from helpdesk.models import Attendant, Message, ServiceMode
 from helpdesk.repository import InMemoryTicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
@@ -57,6 +57,7 @@ class TestProjecao(unittest.TestCase):
                 "priority",
                 "status",
                 "assignee",
+                "local",
                 "opened_at",
                 "open_for",
                 "age_minutes",
@@ -80,6 +81,22 @@ class TestProjecao(unittest.TestCase):
         ticket.assignee = None
         (row,) = panel_rows([ticket])
         self.assertEqual(row.assignee, "—")
+
+    def test_local_de_atendimento_na_projecao(self):
+        service = make_service()
+        presencial = open_ticket(service, sender="p1")
+        service.set_attendance(
+            presencial.id, mode=ServiceMode.PRESENCIAL, location="Sala 203"
+        )
+        remoto = open_ticket(service, sender="r1")
+        service.set_attendance(remoto.id, mode=ServiceMode.REMOTO)
+        indefinido = open_ticket(service, sender="i1")
+        rows = {r.ticket_id: r for r in panel_rows([presencial, remoto, indefinido])}
+        self.assertEqual(rows[presencial.id].local, "Sala 203")
+        self.assertEqual(rows[remoto.id].local, "Remoto")
+        self.assertEqual(rows[indefinido.id].local, "—")
+        # O local é operacional e aparece na página (ao contrário de dados do solicitante).
+        self.assertIn("Sala 203", render_dashboard([presencial]))
 
     def test_ordena_por_prioridade_e_idade(self):
         service = make_service()

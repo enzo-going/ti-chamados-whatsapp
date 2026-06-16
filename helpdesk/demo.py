@@ -43,7 +43,7 @@ from uuid import uuid4
 from helpdesk.attendants import load_roster
 from helpdesk.http_app import make_server
 from helpdesk.inbound import MessageGateway
-from helpdesk.models import Message, Ticket
+from helpdesk.models import Message, ServiceMode, Ticket
 from helpdesk.repository import SqliteTicketRepository, TicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
@@ -68,6 +68,10 @@ class _Cenario:
     text: str
     age: timedelta
     lifecycle: str  # "novo" | "andamento" | "resolvido" | "fechado"
+    # Local/modo de atendimento opcional, para o painel da demo mostrar a coluna
+    # "Local" preenchida (definido como um atendente faria, não pela mensagem).
+    mode: ServiceMode | None = None
+    local: str | None = None
 
 
 # Roteiro com categorias, prioridades, idades e status variados. Os textos são
@@ -91,23 +95,26 @@ _CENARIOS: tuple[_Cenario, ...] = (
         "preciso de um notebook emprestado para o treinamento de amanhã",
         timedelta(days=1, hours=2), "andamento",
     ),
-    # acesso · média · atribuído
+    # acesso · média · atribuído · remoto (dá para resolver à distância)
     _Cenario(
         "5513990001004", "Funcionário Exemplo 4",
         "esqueci minha senha do email, podem redefinir?",
         timedelta(hours=4), "novo",
+        mode=ServiceMode.REMOTO,
     ),
-    # hardware · média · em andamento
+    # hardware · média · em andamento · presencial na recepção
     _Cenario(
         "5513990001005", "Funcionário Exemplo 5",
         "o computador da recepção não liga de jeito nenhum",
         timedelta(hours=2, minutes=30), "andamento",
+        mode=ServiceMode.PRESENCIAL, local="Recepção",
     ),
-    # rede · ALTA · atribuído
+    # rede · ALTA · atribuído · presencial no 2º andar
     _Cenario(
         "5513990001006", "Funcionário Exemplo 6",
         "a rede caiu no segundo andar, ninguém consegue acessar o sistema",
         timedelta(hours=1, minutes=10), "novo",
+        mode=ServiceMode.PRESENCIAL, local="2º andar",
     ),
     # outros · ALTA · atribuído
     _Cenario(
@@ -156,6 +163,10 @@ def seed_demo(
         elif cenario.lifecycle == "fechado":
             service.resolve(ticket.id, "Resolvido durante a demonstração.")
             service.close(ticket.id)
+        if cenario.mode is not None or cenario.local is not None:
+            service.set_attendance(
+                ticket.id, mode=cenario.mode, location=cenario.local
+            )
         tickets.append(repository.get(ticket.id) or ticket)
     return tickets
 
@@ -471,6 +482,36 @@ def _cmd_seed(args: argparse.Namespace) -> None:
         repository.close()
 
 
+def _cmd_clear(args: argparse.Namespace) -> None:
+    path = Path(args.db)
+    if not path.exists():
+        sys.exit(
+            f"O arquivo {args.db} não existe — nada para limpar. "
+            "Crie a demo com: python -m helpdesk.demo seed"
+        )
+    # Limpa via SQL (clear), não apagando o arquivo: funciona mesmo com o
+    # servidor da demo aberto (mesmo motivo do --reset, ver decisão 16).
+    try:
+        repository = SqliteTicketRepository(str(path))
+    except sqlite3.OperationalError:
+        sys.exit(
+            f"Não foi possível abrir {args.db} (em uso?). Feche a janela do "
+            "servidor da demo e rode de novo."
+        )
+    try:
+        repository.clear()
+        print(f"Banco da demonstração esvaziado: {args.db}")
+        print("  0 chamados — os ids recomeçam do #1 no próximo chamado.")
+        print("Recarregue /dashboard para ver o painel vazio.")
+    except sqlite3.OperationalError:
+        sys.exit(
+            f"O banco {args.db} está em uso (servidor da demo escrevendo agora?). "
+            "Feche a janela do servidor e rode de novo."
+        )
+    finally:
+        repository.close()
+
+
 def _cmd_send(args: argparse.Namespace) -> None:
     base_url = f"http://127.0.0.1:{args.port}"
     try:
@@ -530,6 +571,12 @@ def main() -> None:
         "--reset", action="store_true", help="recria o banco se ele já existir"
     )
     seed.set_defaults(func=_cmd_seed)
+
+    clear = sub.add_parser(
+        "clear", help="esvazia o banco de demonstração (apaga todos os chamados)"
+    )
+    clear.add_argument("--db", default=DEFAULT_DEMO_DB, help="padrão: %(default)s")
+    clear.set_defaults(func=_cmd_clear)
 
     send = sub.add_parser(
         "send", help="simula uma mensagem chegando (POST no servidor local)"

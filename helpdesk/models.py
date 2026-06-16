@@ -41,6 +41,18 @@ class Status(str, Enum):
     FECHADO = "fechado"
 
 
+class ServiceMode(str, Enum):
+    """Como o chamado será atendido: no local do funcionário ou à distância.
+
+    ``PRESENCIAL`` costuma vir acompanhado de um ``location`` (sala, setor ou
+    evento); ``REMOTO`` indica que dá para resolver à distância. É metadado
+    **operacional** (define para onde o atendente vai), não dado do solicitante.
+    """
+
+    PRESENCIAL = "presencial"
+    REMOTO = "remoto"
+
+
 # Papel/cargo usado quando o quadro não informa um (ex.: "supervisor",
 # "efetivo", "estagiario", "aprendiz", "suporte").
 DEFAULT_ROLE = "atendente"
@@ -91,6 +103,10 @@ class Ticket:
     updated_at: datetime = field(default_factory=_now)
     closed_at: datetime | None = None
     history: list[str] = field(default_factory=list)
+    # Local/modo de atendimento (opcional): definido por um atendente, não pela
+    # mensagem do funcionário. `location` é texto livre (sala, setor, evento).
+    service_mode: ServiceMode | None = None
+    location: str | None = None
 
     def touch(self, note: str) -> None:
         """Registra um evento no histórico e atualiza o timestamp."""

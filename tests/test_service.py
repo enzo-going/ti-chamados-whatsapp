@@ -3,7 +3,7 @@
 import unittest
 from datetime import timedelta
 
-from helpdesk.models import Attendant, Category, Message, Priority, Status
+from helpdesk.models import Attendant, Category, Message, Priority, ServiceMode, Status
 from helpdesk.repository import InMemoryTicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
@@ -213,6 +213,44 @@ class TestActiveRoster(unittest.TestCase):
         # Chamado novo de outra pessoa: vai para quem está ativo.
         novo = service_v2.handle_message(Message(sender="w", text="impressora parou"))
         self.assertEqual(novo.assignee.id, "ti2")
+
+
+class TestSetAttendance(unittest.TestCase):
+    """Local/modo de atendimento: definido por um atendente, não pela mensagem."""
+
+    def test_presencial_com_local_registra_e_persiste(self):
+        service, _ = make_service()
+        t = service.handle_message(Message(sender="z", text="a rede caiu"))
+        atualizado = service.set_attendance(
+            t.id, mode=ServiceMode.PRESENCIAL, location="Sala 203"
+        )
+        self.assertEqual(atualizado.service_mode, ServiceMode.PRESENCIAL)
+        self.assertEqual(atualizado.location, "Sala 203")
+        # Persistiu e registrou no histórico (sem mexer em status/responsável).
+        gravado = service.repository.get(t.id)
+        self.assertEqual(gravado.location, "Sala 203")
+        self.assertEqual(gravado.status, t.status)
+        self.assertEqual(gravado.assignee, t.assignee)
+        self.assertTrue(any("Sala 203" in h for h in gravado.history))
+
+    def test_remoto_nao_exige_local(self):
+        service, _ = make_service()
+        t = service.handle_message(Message(sender="z", text="esqueci minha senha"))
+        atualizado = service.set_attendance(t.id, mode=ServiceMode.REMOTO)
+        self.assertEqual(atualizado.service_mode, ServiceMode.REMOTO)
+        self.assertIsNone(atualizado.location)
+        self.assertTrue(any("remoto" in h.lower() for h in atualizado.history))
+
+    def test_sem_modo_nem_local_levanta_erro(self):
+        service, _ = make_service()
+        t = service.handle_message(Message(sender="z", text="sistema lento"))
+        with self.assertRaises(ValueError):
+            service.set_attendance(t.id)
+
+    def test_chamado_inexistente_levanta_keyerror(self):
+        service, _ = make_service()
+        with self.assertRaises(KeyError):
+            service.set_attendance(9999, mode=ServiceMode.REMOTO)
 
 
 if __name__ == "__main__":
