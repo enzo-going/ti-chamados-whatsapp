@@ -125,7 +125,9 @@ atual da Meta na hora.
 ## Roteiro do dia da validação (quando a Fase 3 for liberada)
 
 Passos operacionais para o teste supervisionado com **número de teste** — em
-ordem; nenhum deles entra no repositório:
+ordem; nenhum deles entra no repositório. Versão **detalhada** (com as telas da
+Meta e o mapeamento para as nossas variáveis) em
+[guia da Cloud API](guia-cloud-api.md):
 
 1. Criar o app na plataforma da API oficial e anotar (fora do repo): token de
    acesso, id do número de teste, app secret; escolher um verify token.

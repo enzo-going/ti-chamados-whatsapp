@@ -16,6 +16,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 - [Demonstração local](demo-local.md) — passo a passo para rodar e testar na máquina.
 - [Roteiro de demonstração](roteiro-demo.md) — guia curto de apresentação (~10 min).
 - [Checklist de pré-integração](pre-integracao.md) — o que validar antes de conectar uma linha real (sem credenciais no repositório).
+- [Guia da Cloud API](guia-cloud-api.md) — passo a passo do dia: criar o app na Meta e validar com o número de teste.
 - [Risco de banimento no WhatsApp](riscos-banimento.md) — por que o nosso uso (Cloud API oficial, reativo, interno) fica no lado de baixo risco, e como lidar com o que sobra.
 - [Visão geral (README)](../README.md) — descrição e instruções de uso.
 
