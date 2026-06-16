@@ -50,7 +50,7 @@ Atalho para o [registro de decisões](decisoes.md) (ADR), agrupado por assunto:
 | Atendentes | 10 (papéis genéricos), 11 (quadro JSON configurável) |
 | Atendimento (local/modo) | 18 (presencial/remoto + local) |
 | Painel / wallboard | 8 (direção do wallboard), 12 (painel read-only), 17 (leitura rápida) |
-| Integração WhatsApp | 14 (borda Cloud API) |
+| Integração WhatsApp | 14 (borda Cloud API) · risco em [banimento](riscos-banimento.md) |
 | Demonstração | 19 (comando `clear`) |
 
 ## Fluxo de uma mensagem (resumo)
@@ -73,6 +73,7 @@ o desfecho explícito é a decisão 20.
 - [Arquitetura](arquitetura.md) — componentes, fluxo e ciclo de vida (diagramas).
 - [Roadmap](roadmap.md) — fases e decisões em aberto.
 - [Registro de decisões](decisoes.md) — ADR completo.
+- [Risco de banimento no WhatsApp](riscos-banimento.md) — por que o uso é de baixo risco.
 - [Checklist de pré-integração](pre-integracao.md) — antes de conectar uma linha real.
 - [Demonstração local](demo-local.md) · [Roteiro de demonstração](roteiro-demo.md)
 - [Índice](index.md) — lista de documentos + mapa do código.
