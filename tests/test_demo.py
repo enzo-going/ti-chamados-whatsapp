@@ -16,7 +16,7 @@ from helpdesk.dashboard import render_dashboard
 from helpdesk.demo import run_check, seed_demo, send_message
 from helpdesk.http_app import make_server
 from helpdesk.inbound import MessageGateway
-from helpdesk.models import Attendant, Priority
+from helpdesk.models import Attendant, Priority, ServiceMode
 from helpdesk.repository import InMemoryTicketRepository, SqliteTicketRepository
 from helpdesk.service import HelpdeskService
 from helpdesk.transport import FakeTransport
@@ -101,6 +101,7 @@ class TestSendMessage(unittest.TestCase):
     def test_envia_e_cria_chamado(self):
         result = send_message("a rede caiu para todo mundo", base_url=self.base_url)
         self.assertFalse(result["duplicate"])
+        self.assertEqual(result["outcome"], "criado")
         self.assertEqual(result["category"], "rede")
         self.assertIsNotNone(self.service.repository.get(result["ticket_id"]))
 
@@ -116,6 +117,7 @@ class TestSendMessage(unittest.TestCase):
         r2 = send_message("impressora parou", base_url=self.base_url, event_id="evt-demo")
         self.assertFalse(r1["duplicate"])
         self.assertTrue(r2["duplicate"])
+        self.assertIsNone(r2["outcome"])  # reentrega não tem desfecho novo
         self.assertEqual(r1["ticket_id"], r2["ticket_id"])
 
     def test_mesmo_remetente_vira_followup(self):
@@ -125,6 +127,8 @@ class TestSendMessage(unittest.TestCase):
         r2 = send_message("já tentei reiniciar e nada", base_url=self.base_url)
         self.assertEqual(r1["ticket_id"], r2["ticket_id"])
         self.assertFalse(r2["duplicate"])  # evento novo, mesmo chamado
+        self.assertEqual(r1["outcome"], "criado")
+        self.assertEqual(r2["outcome"], "followup")  # relatado como follow-up, não "novo"
 
     def test_conexao_ociosa_nao_bloqueia_o_servidor(self):
         # Regressão: o navegador com o painel aberto mantém conexões TCP sem
@@ -323,6 +327,46 @@ class TestCliClear(unittest.TestCase):
             self.assertEqual(saida.returncode, 1)
             self.assertNotIn("Traceback", combinado)
             self.assertIn("não existe", combinado)
+
+
+class TestCliLocate(unittest.TestCase):
+    """`demo locate` define o local/modo de atendimento de um chamado."""
+
+    raiz = Path(__file__).resolve().parent.parent
+
+    def _rodar(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, "-m", "helpdesk.demo", *args],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(self.raiz), timeout=60,
+        )
+
+    def test_locate_define_modo_e_local(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = str(Path(tmpdir) / "demo-locate.sqlite3")
+            self.assertEqual(self._rodar("seed", "--db", db).returncode, 0)
+            saida = self._rodar(
+                "locate", "8", "--modo", "presencial", "--local", "Sala 9", "--db", db
+            )
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+
+            repo = SqliteTicketRepository(db)
+            try:
+                t = repo.get(8)
+                self.assertEqual(t.service_mode, ServiceMode.PRESENCIAL)
+                self.assertEqual(t.location, "Sala 9")
+            finally:
+                repo.close()
+
+    def test_locate_chamado_inexistente_sem_traceback(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db = str(Path(tmpdir) / "demo-locate2.sqlite3")
+            self.assertEqual(self._rodar("seed", "--db", db).returncode, 0)
+            saida = self._rodar("locate", "999", "--modo", "remoto", "--db", db)
+            combinado = (saida.stdout or "") + (saida.stderr or "")
+            self.assertEqual(saida.returncode, 1)
+            self.assertNotIn("Traceback", combinado)
+            self.assertIn("não encontrado", combinado)
 
 
 class TestCliAmigavel(unittest.TestCase):

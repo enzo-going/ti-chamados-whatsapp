@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from helpdesk.models import Attendant, Category, Message, Priority, ServiceMode, Status
 from helpdesk.repository import InMemoryTicketRepository
-from helpdesk.service import HelpdeskService
+from helpdesk.service import HelpdeskService, MessageOutcome
 from helpdesk.transport import FakeTransport
 
 
@@ -213,6 +213,41 @@ class TestActiveRoster(unittest.TestCase):
         # Chamado novo de outra pessoa: vai para quem está ativo.
         novo = service_v2.handle_message(Message(sender="w", text="impressora parou"))
         self.assertEqual(novo.assignee.id, "ti2")
+
+
+class TestProcessMessageOutcome(unittest.TestCase):
+    """process_message relata o desfecho: criado / follow-up / reaberto."""
+
+    def test_criado(self):
+        service, _ = make_service()
+        r = service.process_message(Message(sender="z", text="a rede caiu"))
+        self.assertEqual(r.outcome, MessageOutcome.CRIADO)
+        self.assertEqual(len(service.repository.all()), 1)  # abriu um chamado
+
+    def test_followup(self):
+        service, _ = make_service()
+        service.process_message(Message(sender="z", text="meu pc não liga"))
+        r2 = service.process_message(Message(sender="z", text="já reiniciei e nada"))
+        self.assertEqual(r2.outcome, MessageOutcome.FOLLOWUP)
+
+    def test_reaberto(self):
+        service, _ = make_service(reopen_hours=2)
+        primeiro = service.process_message(Message(sender="z", text="rede caiu"))
+        service.resolve(primeiro.ticket.id)
+        nova = Message(
+            sender="z",
+            text="voltou a cair",
+            received_at=primeiro.ticket.closed_at + timedelta(minutes=20),
+        )
+        r = service.process_message(nova)
+        self.assertEqual(r.outcome, MessageOutcome.REABERTO)
+        self.assertEqual(r.ticket.id, primeiro.ticket.id)
+
+    def test_handle_message_continua_devolvendo_o_ticket(self):
+        # Compatibilidade: o atalho antigo segue devolvendo só o Ticket.
+        service, _ = make_service()
+        ticket = service.handle_message(Message(sender="z", text="impressora sem toner"))
+        self.assertEqual(ticket.id, 1)
 
 
 class TestSetAttendance(unittest.TestCase):

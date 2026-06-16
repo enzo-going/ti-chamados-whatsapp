@@ -141,11 +141,15 @@ Pequenas melhorias de domínio, independentes do plano por fases:
   ambiente descartável (banco temporário + porta efêmera) e aponta o passo que
   falhar. Pensada como pré-voo de apresentações.
 - **Local/modo de atendimento** (`presencial`/`remoto` + local livre): campos no
-  `Ticket`, setter no serviço (`set_attendance`) e coluna **Local** no painel.
-  Marcar pela interface fica para a Fase 4; o seed já mostra exemplos. Detalhes
-  em [decisões](decisoes.md), decisão 18.
+  `Ticket`, setter no serviço (`set_attendance`), coluna **Local** no painel e o
+  comando `demo locate` para marcar ao vivo. Pela interface dos atendentes fica
+  para a Fase 4; o seed já mostra exemplos. Detalhes em
+  [decisões](decisoes.md), decisão 18.
 - **Esvaziar o banco da demonstração** (`python -m helpdesk.demo clear`): zera
   todos os chamados sem repovoar (decisão 19).
+- **Desfecho explícito da mensagem** (`MessageOutcome`: criado/follow-up/
+  reaberto): a CLI e o log do servidor passam a relatar o que de fato aconteceu,
+  em vez de tratar todo evento como "novo" (decisão 20).
 
 ## Decisões em aberto (suas)
 

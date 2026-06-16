@@ -56,6 +56,9 @@ python -m helpdesk.demo clear
 # Simular uma mensagem chegando (com o servidor local rodando)
 python -m helpdesk.demo send "a impressora do RH parou"
 
+# Marcar o local/modo de atendimento de um chamado (presencial/remoto)
+python -m helpdesk.demo locate 6 --modo presencial --local "Sala 203"
+
 # Demonstração com um roteiro de mensagens de exemplo
 python main.py
 

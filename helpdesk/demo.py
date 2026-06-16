@@ -314,6 +314,11 @@ def run_check() -> list[CheckStep]:
                 )
                 if novo.get("duplicate"):
                     raise RuntimeError("a primeira mensagem veio marcada como repetida")
+                if novo.get("outcome") != "criado":
+                    raise RuntimeError(
+                        f"desfecho inesperado da 1ª mensagem: {novo.get('outcome')!r} "
+                        "(esperado: 'criado')"
+                    )
                 if novo.get("category") != "impressora":
                     raise RuntimeError(
                         f"triagem inesperada: {novo.get('category')!r} "
@@ -341,6 +346,11 @@ def run_check() -> list[CheckStep]:
                     )
                 if seguida.get("duplicate"):
                     raise RuntimeError("follow-up veio marcado como evento repetido")
+                if seguida.get("outcome") != "followup":
+                    raise RuntimeError(
+                        "o follow-up não foi relatado como follow-up: "
+                        f"{seguida.get('outcome')!r}"
+                    )
             except Exception as exc:
                 steps.append(
                     CheckStep("follow-up cai no mesmo chamado", False, str(exc))
@@ -512,6 +522,59 @@ def _cmd_clear(args: argparse.Namespace) -> None:
         repository.close()
 
 
+_MODE_BY_NAME = {
+    "presencial": ServiceMode.PRESENCIAL,
+    "remoto": ServiceMode.REMOTO,
+}
+
+
+def _cmd_locate(args: argparse.Namespace) -> None:
+    path = Path(args.db)
+    if not path.exists():
+        sys.exit(
+            f"O arquivo {args.db} não existe. Crie a demo com: "
+            "python -m helpdesk.demo seed"
+        )
+    if not args.modo and not args.local:
+        sys.exit("Informe --modo (presencial|remoto) e/ou --local.")
+    # Fala direto com o banco (como seed/clear): funciona com o servidor da demo
+    # aberto, e a próxima recarga do painel já mostra a coluna Local atualizada.
+    try:
+        repository = SqliteTicketRepository(str(path), allow_cross_thread=True)
+    except sqlite3.OperationalError:
+        sys.exit(
+            f"Não foi possível abrir {args.db} (em uso?). Feche a janela do "
+            "servidor da demo e rode de novo."
+        )
+    try:
+        service = HelpdeskService(
+            transport=FakeTransport(),
+            attendants=load_roster(),
+            repository=repository,
+        )
+        ticket = service.set_attendance(
+            args.ticket_id,
+            mode=_MODE_BY_NAME.get(args.modo),
+            location=args.local,
+        )
+        partes = []
+        if ticket.service_mode is not None:
+            partes.append(f"modo {ticket.service_mode.value}")
+        if ticket.location:
+            partes.append(f"local {ticket.location!r}")
+        print(f"Chamado #{ticket.id}: atendimento atualizado ({' · '.join(partes)}).")
+        print("Recarregue /dashboard para ver a coluna Local atualizada.")
+    except KeyError:
+        sys.exit(f"Chamado #{args.ticket_id} não encontrado em {args.db}.")
+    except sqlite3.OperationalError:
+        sys.exit(
+            f"O banco {args.db} está em uso (servidor da demo escrevendo agora?). "
+            "Feche a janela do servidor e rode de novo."
+        )
+    finally:
+        repository.close()
+
+
 def _cmd_send(args: argparse.Namespace) -> None:
     base_url = f"http://127.0.0.1:{args.port}"
     try:
@@ -544,9 +607,19 @@ def _cmd_send(args: argparse.Namespace) -> None:
             f"Evento repetido — devolvido o chamado existente #{result['ticket_id']} "
             "(idempotência, nada foi duplicado)."
         )
-    else:
+    elif result.get("outcome") == "followup":
         print(
-            f"Mensagem registrada no chamado #{result['ticket_id']} "
+            f"Follow-up: anexamos a mensagem ao chamado #{result['ticket_id']} "
+            "(não abrimos outro)."
+        )
+    elif result.get("outcome") == "reaberto":
+        print(
+            f"Chamado #{result['ticket_id']} reaberto pela nova mensagem "
+            f"(categoria: {result['category']})."
+        )
+    else:  # "criado" (ou ausente, por retrocompatibilidade)
+        print(
+            f"Novo chamado #{result['ticket_id']} aberto "
             f"(categoria: {result['category']})."
         )
     print("Atualize o painel para ver: recarregue /dashboard no navegador.")
@@ -577,6 +650,20 @@ def main() -> None:
     )
     clear.add_argument("--db", default=DEFAULT_DEMO_DB, help="padrão: %(default)s")
     clear.set_defaults(func=_cmd_clear)
+
+    locate = sub.add_parser(
+        "locate", help="define o local/modo de atendimento de um chamado"
+    )
+    locate.add_argument("ticket_id", type=int, help="número do chamado (ex.: 6)")
+    locate.add_argument(
+        "--modo",
+        choices=("presencial", "remoto"),
+        default=None,
+        help="presencial ou remoto",
+    )
+    locate.add_argument("--local", default=None, help='local livre, ex.: "Sala 203"')
+    locate.add_argument("--db", default=DEFAULT_DEMO_DB, help="padrão: %(default)s")
+    locate.set_defaults(func=_cmd_locate)
 
     send = sub.add_parser(
         "send", help="simula uma mensagem chegando (POST no servidor local)"

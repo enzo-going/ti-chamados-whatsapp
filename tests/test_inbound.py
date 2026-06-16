@@ -15,7 +15,7 @@ from helpdesk.http_app import make_server
 from helpdesk.inbound import InvalidPayload, MessageGateway, parse_payload
 from helpdesk.models import Attendant, Category
 from helpdesk.repository import InMemoryTicketRepository, SqliteTicketRepository
-from helpdesk.service import HelpdeskService
+from helpdesk.service import HelpdeskService, MessageOutcome
 from helpdesk.transport import FakeTransport
 
 VALID = {
@@ -99,6 +99,7 @@ class TestIdempotenciaMemoria(unittest.TestCase):
         gateway, service = make_gateway()
         r = gateway.ingest(VALID)
         self.assertFalse(r.duplicate)
+        self.assertEqual(r.outcome, MessageOutcome.CRIADO)
         self.assertEqual(r.ticket.category, Category.EMPRESTIMO_EQUIPAMENTO)
         self.assertEqual(len(service.repository.all()), 1)
 
@@ -108,6 +109,7 @@ class TestIdempotenciaMemoria(unittest.TestCase):
         r2 = gateway.ingest(VALID)  # mesmo event_id
         self.assertFalse(r1.duplicate)
         self.assertTrue(r2.duplicate)
+        self.assertIsNone(r2.outcome)  # reentrega: nada novo aconteceu
         self.assertEqual(r1.ticket.id, r2.ticket.id)
         self.assertEqual(len(service.repository.all()), 1)
 
@@ -128,6 +130,8 @@ class TestIdempotenciaMemoria(unittest.TestCase):
             dict(VALID, event_id="evt-2", text="esqueci de dizer: é no 2o andar")
         )
         self.assertEqual(r1.ticket.id, r2.ticket.id)
+        self.assertEqual(r1.outcome, MessageOutcome.CRIADO)
+        self.assertEqual(r2.outcome, MessageOutcome.FOLLOWUP)
         self.assertEqual(len(service.repository.all()), 1)
 
 

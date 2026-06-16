@@ -7,7 +7,9 @@ testável de ponta a ponta sem nenhuma dependência externa.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
+from enum import Enum
 
 from helpdesk import replies, triage
 from helpdesk.models import Attendant, Message, ServiceMode, Status, Ticket
@@ -17,6 +19,26 @@ from helpdesk.transport import MessagingTransport
 # Janela em que uma nova mensagem do mesmo remetente reabre o último chamado
 # fechado em vez de abrir um novo (inspirado na regra de 2h do whaticket).
 DEFAULT_REOPEN_WINDOW = timedelta(hours=2)
+
+
+class MessageOutcome(str, Enum):
+    """O que uma mensagem recebida provocou no fluxo.
+
+    Existe para que a borda (log do servidor, CLI da demo) relate **o que
+    aconteceu de fato** — em vez de tratar todo evento como "novo".
+    """
+
+    CRIADO = "criado"      # abriu um chamado novo
+    FOLLOWUP = "followup"  # anexada a um chamado aberto, sem abrir outro
+    REABERTO = "reaberto"  # reabriu um chamado fechado recente
+
+
+@dataclass(frozen=True)
+class HandleResult:
+    """Chamado afetado + o desfecho do processamento da mensagem."""
+
+    ticket: Ticket
+    outcome: MessageOutcome
 
 
 class HelpdeskService:
@@ -45,13 +67,25 @@ class HelpdeskService:
     # Fluxo principal
     # ------------------------------------------------------------------ #
     def handle_message(self, message: Message) -> Ticket:
-        """Processa uma mensagem recebida e devolve o chamado afetado."""
+        """Processa uma mensagem e devolve só o chamado afetado.
+
+        Atalho de ``process_message`` para quem não precisa do desfecho.
+        """
+        return self.process_message(message).ticket
+
+    def process_message(self, message: Message) -> HandleResult:
+        """Processa uma mensagem e devolve o chamado **e o desfecho**.
+
+        O desfecho (``MessageOutcome``) diz qual caminho a mensagem tomou — novo
+        chamado, follow-up em chamado aberto ou reabertura de um fechado — para
+        que o log e a CLI possam relatar com fidelidade.
+        """
         followup_ticket = self._try_followup(message)
         if followup_ticket is not None:
             followup_ticket.touch(f"Mensagem adicional: {message.text!r}")
             self.repository.update(followup_ticket)
             self.transport.send(message.sender, replies.followup(followup_ticket))
-            return followup_ticket
+            return HandleResult(followup_ticket, MessageOutcome.FOLLOWUP)
 
         reopened_ticket = self._try_reopen(message)
         if reopened_ticket is not None:
@@ -59,13 +93,13 @@ class HelpdeskService:
             reopened_ticket.status = Status.ABERTO
             self.repository.update(reopened_ticket)
             self.transport.send(message.sender, replies.reopened(reopened_ticket))
-            return reopened_ticket
+            return HandleResult(reopened_ticket, MessageOutcome.REABERTO)
 
         ticket = self._create_ticket(message)
         self._assign(ticket)
         self.repository.update(ticket)
         self.transport.send(message.sender, replies.acknowledgement(ticket))
-        return ticket
+        return HandleResult(ticket, MessageOutcome.CRIADO)
 
     # ------------------------------------------------------------------ #
     # Operações de atendimento (usadas pelos atendentes / painel futuro)

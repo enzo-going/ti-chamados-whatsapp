@@ -348,10 +348,11 @@ opcionais: `service_mode` (`ServiceMode`: `presencial`/`remoto`) e `location`
   adicionadas por `ALTER TABLE` apenas quando faltam (bancos anteriores ao v3),
   sem backfill — chamados antigos ficam "sem definição". Há teste de migração de
   um banco no formato antigo.
-- **Sem ajuste interativo ao vivo por enquanto.** O setter já existe e é testado;
-  a forma de acioná-lo em produção (atendente marcando pela interface) entra com
-  a **Fase 4**. Na demonstração, o `seed` já marca alguns exemplos para o painel
-  exibir a coluna **Local** preenchida.
+- **Ajuste na demo via `demo locate`; em produção, Fase 4.** Para experimentar
+  ao vivo: `python -m helpdesk.demo locate <id> --modo presencial --local
+  "Sala 203"` marca o atendimento falando direto com o banco (a próxima recarga
+  do painel já mostra). O acionamento pelos atendentes na operação real entra com
+  a **Fase 4** (interface). O `seed` também já traz exemplos preenchidos.
 
 ## 19. Comando de demonstração para esvaziar o banco
 
@@ -360,6 +361,32 @@ recriar o roteiro (diferente do `seed --reset`, que limpa e repovoa). Reaproveit
 o `SqliteTicketRepository.clear()` (limpeza via SQL, funciona com o servidor da
 demo aberto — decisão 16) e os ids voltam a começar em `#1`. Pensado para zerar o
 painel durante uma apresentação ou teste.
+
+## 20. Desfecho explícito da mensagem (observabilidade)
+
+**Contexto (confusão real na demonstração):** ao enviar a mesma mensagem várias
+vezes com o **mesmo remetente**, todas caíam como follow-up no mesmo chamado
+(comportamento correto, decisão 9), mas a CLI dizia sempre "Mensagem registrada
+no chamado #N" e o log dizia "evento novo" — dava a impressão de inconsistência,
+porque nada distinguia *criar* de *anexar*.
+
+**Causa raiz:** `handle_message` devolvia só um `Ticket`, sem dizer qual ramo
+tomou. O único sinal que se propagava era `duplicate` (idempotência).
+
+**Decisão:** o serviço passa a expor um **`MessageOutcome`** (`criado` /
+`followup` / `reaberto`) via `process_message` (que devolve `HandleResult` =
+ticket + desfecho). `handle_message` continua existindo como atalho que devolve
+só o `Ticket` (compatibilidade — sem reescrever os chamadores). O desfecho flui
+pelo `IngestResult` até:
+
+- o **log** do servidor (`/inbound: chamado #9 (follow-up anexado)` em vez de
+  "evento novo");
+- o **JSON** de resposta (campo `outcome`), que a **CLI** usa para imprimir
+  "Novo chamado #9 aberto" / "Follow-up: anexamos ao #9" / "#9 reaberto" /
+  "Evento repetido (idempotência)".
+
+Numa reentrega (`duplicate`), `outcome` é `None` — nada novo aconteceu. A regra de
+privacidade do log é mantida: nada de telefone, nome ou texto.
 
 ---
 
