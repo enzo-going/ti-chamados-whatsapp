@@ -162,7 +162,9 @@ Itens que **param o avanço** das fases correspondentes até sua definição.
 ### 1. Estratégia do número (bloqueia a Fase 3)
 
 O código está pronto para a Cloud API oficial; falta definir **qual número** ela
-vai usar. Opções realistas, com trade-offs:
+vai usar. Como o número funciona (teste × produção, e o que "número novo"
+significa) está em [pré-integração](pre-integracao.md). Opções realistas, com
+trade-offs:
 
 | Opção | Prós | Contras |
 |---|---|---|
