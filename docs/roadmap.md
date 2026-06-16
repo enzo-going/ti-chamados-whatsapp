@@ -170,4 +170,4 @@ Painel web (atendente trata o chamado, não só lê) **ou** comandos por WhatsAp
 _Status atual: a decidir._
 
 Ver também: [decisões](decisoes.md) · [pré-integração](pre-integracao.md) ·
-[README](../README.md)
+[risco de banimento](riscos-banimento.md) · [README](../README.md)
