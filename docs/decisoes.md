@@ -1,3 +1,7 @@
+---
+tags: [helpdesk, decisoes, adr]
+---
+
 # Registro de decisões
 
 Documento curto explicando as escolhas principais do projeto.

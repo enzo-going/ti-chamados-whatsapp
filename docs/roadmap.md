@@ -1,3 +1,7 @@
+---
+tags: [helpdesk, roadmap]
+---
+
 # Roadmap — protótipo → MVP
 
 Documento vivo do plano incremental para transformar o protótipo em um MVP real
