@@ -72,6 +72,56 @@ Rode na máquina que fará a validação, na raiz do repositório:
 7. **Varredura de segredos/termos indevidos** no diff antes de qualquer
    commit (repositório público).
 
+## Como funciona o número (teste × produção)
+
+Esclarece uma dúvida recorrente: **a Cloud API não fornece um número de
+produção.** Ela oferece um **número de teste** gratuito; o número que vai
+atender de verdade é **trazido por você**.
+
+### Número de teste (grátis, da Meta)
+
+Ao criar o app no *Meta for Developers* e adicionar o produto WhatsApp, a Meta
+gera **automaticamente** um número de teste (hospedado por ela), com
+`phone_number_id` e um token. É só para desenvolvimento:
+
+- envia apenas para até **5 números** previamente cadastrados (allow-list);
+- o token inicial **expira** (~24h) — depois gera-se um token de usuário de
+  sistema;
+- não serve para uso real.
+
+É com ele que validamos toda a borda (webhook, assinatura, parser, envio) **sem
+comprometer nenhum número real** — é o "número de teste" usado no roteiro abaixo.
+
+### Número de produção (você fornece)
+
+Para ir ao ar, registra-se um **número próprio** na Cloud API, dentro da
+**Business Manager / WABA**:
+
+- o número **não pode estar ativo no WhatsApp/WhatsApp Business comum** do
+  celular — se estiver, é preciso apagar aquela conta antes, porque um número na
+  Cloud API **deixa de funcionar no app**;
+- é preciso **receber o código de verificação** nele (SMS ou ligação) — pode ser
+  chip novo, linha fixa (verifica por voz), etc.;
+- define-se um **nome de exibição**, que passa por revisão da Meta.
+
+### O que "número novo" quer dizer
+
+**Não** é obrigatoriamente um chip recém-comprado: é um número **que não esteja
+preso a uma conta de WhatsApp existente**. Uma **linha dedicada só do setor de
+TI** é o caminho mais limpo (não tira o WhatsApp de ninguém e isola o
+atendimento) — é a opção **A** da estratégia do número no [roadmap](roadmap.md).
+A opção **B** (migrar o número atual do setor) mantém o número conhecido, mas ele
+**para de funcionar no app** enquanto estiver na API.
+
+### Custo (sem cravar valores)
+
+A Meta **não cobra pelo número** (você paga a operadora/linha); a cobrança é
+**por conversa**. Conversas **iniciadas pelo usuário** — o nosso caso, o
+funcionário escreve primeiro — caem na faixa gratuita/barata; o que custa são
+*templates* ativos (marketing/utilitário). Como o uso é reativo e interno, o
+custo tende a ser mínimo. Os preços mudam com frequência — conferir a tabela
+atual da Meta na hora.
+
 ## Roteiro do dia da validação (quando a Fase 3 for liberada)
 
 Passos operacionais para o teste supervisionado com **número de teste** — em
