@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from helpdesk.models import Message, Ticket
-from helpdesk.service import HelpdeskService
+from helpdesk.service import HelpdeskService, MessageOutcome
 
 
 class InvalidPayload(ValueError):
@@ -40,10 +40,16 @@ class InboundEvent:
 
 @dataclass
 class IngestResult:
-    """Resultado de processar um evento. ``duplicate`` indica reentrega."""
+    """Resultado de processar um evento.
+
+    ``duplicate`` indica reentrega (idempotência). ``outcome`` diz o que a
+    mensagem provocou quando foi de fato processada (novo/follow-up/reabertura);
+    é ``None`` numa reentrega, em que nada novo aconteceu.
+    """
 
     ticket: Ticket
     duplicate: bool
+    outcome: MessageOutcome | None = None
 
 
 def parse_payload(payload: Mapping[str, object]) -> InboundEvent:
@@ -112,6 +118,8 @@ class MessageGateway:
             if ticket is not None:
                 return IngestResult(ticket=ticket, duplicate=True)
 
-        ticket = self._service.handle_message(event.message)
-        repo.record_event(event.event_id, ticket.id)
-        return IngestResult(ticket=ticket, duplicate=False)
+        result = self._service.process_message(event.message)
+        repo.record_event(event.event_id, result.ticket.id)
+        return IngestResult(
+            ticket=result.ticket, duplicate=False, outcome=result.outcome
+        )

@@ -50,8 +50,14 @@ python -m helpdesk.demo check
 # Banco de demonstração com chamados fake (recriável à vontade)
 python -m helpdesk.demo seed --reset
 
+# Esvaziar o banco da demonstração (apaga todos os chamados, sem repovoar)
+python -m helpdesk.demo clear
+
 # Simular uma mensagem chegando (com o servidor local rodando)
 python -m helpdesk.demo send "a impressora do RH parou"
+
+# Marcar o local/modo de atendimento de um chamado (presencial/remoto)
+python -m helpdesk.demo locate 6 --modo presencial --local "Sala 203"
 
 # Demonstração com um roteiro de mensagens de exemplo
 python main.py
@@ -154,9 +160,9 @@ real (`atendentes.json`) fica fora do versionamento por poder conter nomes.
 O servidor HTTP local serve em `/dashboard` uma página HTML simples com os
 chamados em aberto — pensada como base para um futuro **wallboard** (TV na sala
 de TI). A página recebe apenas uma **projeção restrita** do chamado: número,
-categoria, prioridade, status, responsável, horário de abertura e tempo em
-aberto. Telefone, nome do solicitante e conteúdo das mensagens **não passam
-pela projeção** (há teste garantindo isso). Ordena por prioridade (alta
+categoria, prioridade, status, responsável, local/modo de atendimento, horário
+de abertura e tempo em aberto. Telefone, nome do solicitante e conteúdo das
+mensagens **não passam pela projeção** (há teste garantindo isso). Ordena por prioridade (alta
 primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
 
 > É um painel **local de desenvolvimento** (`127.0.0.1`, sem autenticação),

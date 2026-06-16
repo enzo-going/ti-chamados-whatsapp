@@ -1,3 +1,7 @@
+---
+tags: [helpdesk, decisoes, adr]
+---
+
 # Registro de decisões
 
 Documento curto explicando as escolhas principais do projeto.
@@ -329,6 +333,66 @@ status** (contagens) e **destaque visual de idade** (borda amarela a partir de
 formal. A projeção restrita da decisão 12 é mantida intacta: as contagens e o
 destaque derivam apenas de campos já projetados, sem trazer telefone, nome do
 solicitante ou texto — com teste de não-vazamento cobrindo o caso.
+
+## 18. Local/modo de atendimento (presencial × remoto)
+
+Alguns chamados se resolvem **à distância**; outros exigem ir a uma **sala,
+setor ou evento** específico. Para registrar isso, o `Ticket` ganhou dois campos
+opcionais: `service_mode` (`ServiceMode`: `presencial`/`remoto`) e `location`
+(texto livre — ex.: "Sala 203", "Recepção", "Auditório"). Escolhas:
+
+- **Metadado operacional, não dado do solicitante.** Define *para onde o
+  atendente vai*, então é definido por um **atendente** (`set_attendance` no
+  serviço), não inferido da mensagem do funcionário. Por isso entra na **projeção
+  do painel** (ajuda o wallboard: "para onde preciso ir") sem ferir a privacidade
+  da decisão 8 — não é telefone, nome nem texto do solicitante.
+- **Texto livre para o local, enum só para o modo.** Salas/eventos variam demais
+  para um enum; já presencial/remoto é uma escolha fechada e útil para filtros
+  futuros. `location` costuma acompanhar o presencial, mas os campos são
+  independentes (um pode existir sem o outro).
+- **Migração de schema (v3) idempotente.** As duas colunas são nuláveis e
+  adicionadas por `ALTER TABLE` apenas quando faltam (bancos anteriores ao v3),
+  sem backfill — chamados antigos ficam "sem definição". Há teste de migração de
+  um banco no formato antigo.
+- **Ajuste na demo via `demo locate`; em produção, Fase 4.** Para experimentar
+  ao vivo: `python -m helpdesk.demo locate <id> --modo presencial --local
+  "Sala 203"` marca o atendimento falando direto com o banco (a próxima recarga
+  do painel já mostra). O acionamento pelos atendentes na operação real entra com
+  a **Fase 4** (interface). O `seed` também já traz exemplos preenchidos.
+
+## 19. Comando de demonstração para esvaziar o banco
+
+`python -m helpdesk.demo clear [--db ...]` apaga **todos** os chamados sem
+recriar o roteiro (diferente do `seed --reset`, que limpa e repovoa). Reaproveita
+o `SqliteTicketRepository.clear()` (limpeza via SQL, funciona com o servidor da
+demo aberto — decisão 16) e os ids voltam a começar em `#1`. Pensado para zerar o
+painel durante uma apresentação ou teste.
+
+## 20. Desfecho explícito da mensagem (observabilidade)
+
+**Contexto (confusão real na demonstração):** ao enviar a mesma mensagem várias
+vezes com o **mesmo remetente**, todas caíam como follow-up no mesmo chamado
+(comportamento correto, decisão 9), mas a CLI dizia sempre "Mensagem registrada
+no chamado #N" e o log dizia "evento novo" — dava a impressão de inconsistência,
+porque nada distinguia *criar* de *anexar*.
+
+**Causa raiz:** `handle_message` devolvia só um `Ticket`, sem dizer qual ramo
+tomou. O único sinal que se propagava era `duplicate` (idempotência).
+
+**Decisão:** o serviço passa a expor um **`MessageOutcome`** (`criado` /
+`followup` / `reaberto`) via `process_message` (que devolve `HandleResult` =
+ticket + desfecho). `handle_message` continua existindo como atalho que devolve
+só o `Ticket` (compatibilidade — sem reescrever os chamadores). O desfecho flui
+pelo `IngestResult` até:
+
+- o **log** do servidor (`/inbound: chamado #9 (follow-up anexado)` em vez de
+  "evento novo");
+- o **JSON** de resposta (campo `outcome`), que a **CLI** usa para imprimir
+  "Novo chamado #9 aberto" / "Follow-up: anexamos ao #9" / "#9 reaberto" /
+  "Evento repetido (idempotência)".
+
+Numa reentrega (`duplicate`), `outcome` é `None` — nada novo aconteceu. A regra de
+privacidade do log é mantida: nada de telefone, nome ou texto.
 
 ---
 

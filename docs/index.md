@@ -9,6 +9,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 
 ## Documentos
 
+- [Mapa do projeto](mapa.md) — visão de uma tela: fases e decisões por tema (ponto de partida).
 - [Arquitetura](arquitetura.md) — visão de componentes, fluxo e ciclo de vida (com diagramas).
 - [Roadmap](roadmap.md) — plano incremental por fases e decisões em aberto.
 - [Registro de decisões](decisoes.md) — decisões de arquitetura (ADR).
@@ -51,3 +52,7 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
   ativo/inativo (ver [decisões](decisoes.md), decisão 11).
 - **Painel local somente leitura:** entregue — `/dashboard` com projeção
   restrita dos chamados em aberto, base do futuro wallboard (decisão 12).
+- **Local/modo de atendimento + observabilidade:** chamados ganham local/modo
+  (presencial/remoto; coluna no painel; comando `demo locate`), e a CLI e o log
+  passam a relatar o desfecho da mensagem — criado/follow-up/reaberto
+  (ver [decisões](decisoes.md), decisões 18–20).

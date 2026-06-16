@@ -42,7 +42,7 @@ from helpdesk.attendants import load_roster
 from helpdesk.dashboard import render_dashboard
 from helpdesk.inbound import InvalidPayload, MessageGateway
 from helpdesk.repository import SqliteTicketRepository, TicketRepository
-from helpdesk.service import HelpdeskService
+from helpdesk.service import HelpdeskService, MessageOutcome
 from helpdesk.transport import FakeTransport, MessagingTransport
 from helpdesk.whatsapp import (
     CloudApiTransport,
@@ -56,6 +56,13 @@ from helpdesk.whatsapp import (
 _INBOUND_PATH = "/inbound"
 _DASHBOARD_PATH = "/dashboard"
 _WEBHOOK_PATH = "/webhook"
+
+# Descrição curta do desfecho para o log operacional (sem conteúdo de mensagem).
+_OUTCOME_LOG = {
+    MessageOutcome.CRIADO: "novo chamado",
+    MessageOutcome.FOLLOWUP: "follow-up anexado",
+    MessageOutcome.REABERTO: "reaberto",
+}
 
 # Log operacional da borda. Regra de privacidade: as mensagens de log nunca
 # incluem telefone, nome de solicitante nem texto de mensagem — apenas números
@@ -143,17 +150,18 @@ def make_handler(
                 _log.warning("/inbound: payload recusado: %s", exc)
                 self._json(400, {"error": str(exc)})
                 return
-            _log.info(
-                "/inbound: chamado #%d (%s)",
-                result.ticket.id,
-                "reentrega, nada duplicado" if result.duplicate else "evento novo",
-            )
+            if result.duplicate:
+                descricao = "reentrega, nada duplicado"
+            else:
+                descricao = _OUTCOME_LOG.get(result.outcome, "processado")
+            _log.info("/inbound: chamado #%d (%s)", result.ticket.id, descricao)
             self._json(
                 200,
                 {
                     "ticket_id": result.ticket.id,
                     "category": result.ticket.category.value,
                     "duplicate": result.duplicate,
+                    "outcome": result.outcome.value if result.outcome else None,
                 },
             )
 
@@ -201,7 +209,11 @@ def make_handler(
                     ignored.append(str(exc))
                     continue
                 tickets.append(
-                    {"ticket_id": result.ticket.id, "duplicate": result.duplicate}
+                    {
+                        "ticket_id": result.ticket.id,
+                        "duplicate": result.duplicate,
+                        "outcome": result.outcome.value if result.outcome else None,
+                    }
                 )
             # Sempre 200 com assinatura válida: a plataforma reentrega eventos
             # respondidos com erro, e recibos/tipos ignorados não são erro.

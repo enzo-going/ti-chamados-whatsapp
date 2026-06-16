@@ -8,9 +8,11 @@ a TV da sala de TI (wallboard), prevista no roadmap.
 
 Privacidade (decisão 8 do registro de decisões): a tela recebe uma **projeção
 restrita** do chamado — apenas dados operacionais (número, categoria,
-prioridade, status, responsável, abertura e tempo em aberto). Telefone do
-solicitante, nome do solicitante, assunto e histórico de mensagens **não**
-passam pela projeção, então não têm como vazar para a página.
+prioridade, status, responsável, **local/modo de atendimento**, abertura e
+tempo em aberto). Telefone do solicitante, nome do solicitante, assunto e
+histórico de mensagens **não** passam pela projeção, então não têm como vazar
+para a página. O local de atendimento é metadado operacional (define para onde
+o atendente vai), definido por um atendente — não dado do solicitante.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from collections import Counter
 from dataclasses import dataclass, fields
 from datetime import datetime, timedelta, timezone
 
-from helpdesk.models import Priority, Status, Ticket
+from helpdesk.models import Priority, ServiceMode, Status, Ticket
 from helpdesk.replies import category_label, priority_label
 
 # Intervalo de recarga automática da página (segundos). Leve o bastante para
@@ -55,6 +57,7 @@ class PanelRow:
     priority: str
     status: str
     assignee: str
+    local: str
     opened_at: str
     open_for: str
     age_minutes: int
@@ -80,6 +83,22 @@ def _format_opened(created_at: datetime, now: datetime) -> str:
     return local.strftime("%d/%m %H:%M")
 
 
+def _format_local(ticket: Ticket) -> str:
+    """Resumo operacional do local/modo de atendimento para a tela.
+
+    Mostra o local (sala/setor/evento) quando há um; senão, "Remoto"/"Presencial"
+    pelo modo; e "—" quando nada foi definido. É metadado operacional — nunca
+    inclui telefone, nome do solicitante ou texto da mensagem.
+    """
+    if ticket.location:
+        return ticket.location
+    if ticket.service_mode is ServiceMode.REMOTO:
+        return "Remoto"
+    if ticket.service_mode is ServiceMode.PRESENCIAL:
+        return "Presencial"
+    return "—"
+
+
 def project(ticket: Ticket, now: datetime) -> PanelRow:
     """Converte um ``Ticket`` na projeção restrita exibida no painel."""
     age_minutes = _age_minutes(now - ticket.created_at)
@@ -89,6 +108,7 @@ def project(ticket: Ticket, now: datetime) -> PanelRow:
         priority=priority_label(ticket.priority),
         status=_STATUS_LABEL[ticket.status],
         assignee=ticket.assignee.name if ticket.assignee else "—",
+        local=_format_local(ticket),
         opened_at=_format_opened(ticket.created_at, now),
         open_for=format_duration(timedelta(minutes=age_minutes)),
         age_minutes=age_minutes,
@@ -150,7 +170,7 @@ _PAGE = """<!DOCTYPE html>
 
 _TABLE = """<table>
 <thead><tr><th>#</th><th>Categoria</th><th>Prioridade</th><th>Status</th>
-<th>Responsável</th><th>Aberto às</th><th>Tempo aberto</th></tr></thead>
+<th>Responsável</th><th>Local</th><th>Aberto às</th><th>Tempo aberto</th></tr></thead>
 <tbody>
 {rows}
 </tbody>
@@ -170,6 +190,7 @@ def _row_html(row: PanelRow) -> str:
         f'<td class="prio">{html.escape(row.priority)}</td>'
         f"<td>{html.escape(row.status)}</td>"
         f"<td>{html.escape(row.assignee)}</td>"
+        f"<td>{html.escape(row.local)}</td>"
         f"<td>{html.escape(row.opened_at)}</td>"
         f"<td>{html.escape(row.open_for)}</td>"
     )
