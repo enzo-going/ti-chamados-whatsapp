@@ -36,8 +36,10 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
 | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel + rotas `/webhook` |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + página HTML |
 | `helpdesk/demo.py` | Demonstração: seed fake, simulação de mensagens e checagem automática (`check`) |
+| `helpdesk/desktop.py` | Aplicativo Windows: ciclo de vida do servidor, dados persistentes e janela gráfica |
 | `helpdesk/config.py` | Caminhos via variáveis de ambiente + checagem segura de configuração (`check`) |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
+| `desktop_app.py` | Ponto de entrada do executável Windows |
 | `tests/` | Suíte de testes (unittest) |
 
 ## Status
@@ -57,3 +59,6 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
   (presencial/remoto; coluna no painel; comando `demo locate`), e a CLI e o log
   passam a relatar o desfecho da mensagem — criado/follow-up/reaberto
   (ver [decisões](decisoes.md), decisões 18–20).
+- **Aplicativo Windows:** entregue — controlador local empacotável em `.exe`,
+  com atalho na Área de Trabalho, banco persistente e simulação de mensagens
+  (ver [demonstração](demo-local.md) e [decisões](decisoes.md), decisão 21).

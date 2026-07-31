@@ -40,6 +40,12 @@ cria um banco com chamados fake, sobe o servidor local e abre o painel no
 navegador. Passo a passo manual, simulação de mensagens e solução de problemas
 em [`docs/demo-local.md`](docs/demo-local.md).
 
+**Aplicativo Windows:** a versão empacotada abre por um atalho na Área de
+Trabalho, inicia o servidor local em uma porta livre, abre o painel e oferece
+uma caixa para simular mensagens. O banco persiste em
+`%LOCALAPPDATA%\TIChamadosWhatsApp`; fechar a janela encerra o servidor. Ela
+continua sendo uma demonstração local, sem conexão com WhatsApp real.
+
 ```bash
 # Diagnóstico seguro da configuração local (não exibe valores de variáveis)
 python -m helpdesk.config check
@@ -80,6 +86,20 @@ HELPDESK_ATTENDANTS_PATH=atendentes.json python main.py
 python -m unittest discover -s tests
 ```
 
+### Gerar e instalar o aplicativo Windows
+
+O núcleo continua sem dependências de runtime. O script cria um ambiente de
+build isolado, instala nele o empacotador e gera o `.exe`:
+
+```powershell
+.\build_windows.ps1 -Install
+```
+
+O build cria `dist\TI Chamados WhatsApp.exe`, executa uma checagem silenciosa do
+pacote e só então instala. A instalação copia o executável para
+`%LOCALAPPDATA%\Programs\TI Chamados WhatsApp` e cria o atalho
+`TI Chamados WhatsApp` na Área de Trabalho, com o ícone próprio do projeto.
+
 Exemplo de saída do `python main.py`:
 
 ```
@@ -110,10 +130,12 @@ helpdesk/
 ├── http_app.py    # servidor HTTP local (127.0.0.1): entrada + painel + /webhook
 ├── dashboard.py   # painel somente leitura (projeção restrita; base do wallboard)
 ├── demo.py        # demonstração: seed fake, simulação de mensagens e checagem (check)
+├── desktop.py     # controlador gráfico e ciclo de vida do servidor local no Windows
 └── service.py     # orquestra o fluxo completo
 tests/             # suíte de testes (unittest)
 main.py            # demonstração CLI com transporte de mentira
 demo.ps1           # demo completa em um comando (Windows)
+desktop_app.py     # entrada usada para gerar o aplicativo Windows
 ```
 
 **Por que assim:** separar a regra de negócio das integrações é o que permite

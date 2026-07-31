@@ -394,6 +394,29 @@ pelo `IngestResult` até:
 Numa reentrega (`duplicate`), `outcome` é `None` — nada novo aconteceu. A regra de
 privacidade do log é mantida: nada de telefone, nome ou texto.
 
+## 21. Aplicativo Windows como controlador local, separado dos dados
+
+**Contexto:** o projeto já tinha uma demonstração completa, mas exigia abrir o
+PowerShell e manter uma janela de servidor. Para uso em outro PC, faltava o
+padrão de aplicativo instalado com um atalho na Área de Trabalho.
+
+**Decisão:** criar um controlador gráfico pequeno (`helpdesk/desktop.py`),
+empacotado por PyInstaller a partir de `desktop_app.py`. Ele inicia o mesmo
+servidor HTTP já testado, sempre em `127.0.0.1` e numa porta livre, abre o painel
+no navegador e oferece uma simulação de mensagem. Fechar a janela encerra o
+servidor; um mutex do Windows impede duas instâncias usando o mesmo banco.
+
+**Dados fora do executável.** Banco e logs ficam em
+`%LOCALAPPDATA%\TIChamadosWhatsApp`, separados da instalação em
+`%LOCALAPPDATA%\Programs\TI Chamados WhatsApp`. Assim, atualizar o `.exe` não
+apaga os dados. Na primeira execução apenas, um banco vazio recebe o roteiro
+fictício; depois ele é preservado.
+
+**Escopo mantido.** O aplicativo não conecta WhatsApp real, não publica webhook
+e não transforma o painel somente leitura numa interface operacional. Ele é uma
+forma mais simples de iniciar e demonstrar capacidades já existentes; as Fases
+3 e 4 continuam dependentes das decisões registradas no roadmap.
+
 ---
 
 ## Em aberto (a confirmar com o contexto do setor de TI)

@@ -40,6 +40,10 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
   com papéis e ativo/inativo; só ativos entram no rodízio.
 - Modo de demonstração: seed de chamados fake + simulação de mensagens
   ([passo a passo](docs/demo-local.md) · [roteiro](docs/roteiro-demo.md)).
+- Aplicativo Windows (`desktop_app.py` + `helpdesk/desktop.py`): controlador
+  gráfico que inicia o servidor somente em `127.0.0.1`, abre o painel, simula
+  mensagens e persiste o banco fora da pasta de instalação. Build e atalho da
+  Área de Trabalho por `build_windows.ps1 -Install`.
 - Checagem automática da demonstração (`python -m helpdesk.demo check` ou
   `.\demo.ps1 -Check`): percorre o fluxo completo em ambiente descartável
   (banco temporário + porta efêmera) e aponta o passo que falhar.
@@ -69,13 +73,21 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 | `helpdesk/http_app.py` | Servidor HTTP local (`127.0.0.1`): entrada + painel + `/webhook` |
 | `helpdesk/dashboard.py` | Painel somente leitura: projeção restrita + HTML |
 | `helpdesk/demo.py` | Demonstração: seed fake, simulação de mensagens e `check` |
+| `helpdesk/desktop.py` | Controlador do aplicativo Windows: servidor, dados persistentes e janela gráfica |
 | `helpdesk/config.py` | Caminhos (banco, quadro) via variáveis de ambiente |
 | `main.py` | Demonstração de linha de comando (`--repl`, `--db`) |
 | `demo.ps1` | Demonstração completa em um comando (Windows) |
+| `desktop_app.py` | Ponto de entrada do executável Windows |
+| `build_windows.ps1` / `install_windows.ps1` | Build do `.exe` e instalação com atalho |
 | `tests/` | Suíte de testes (unittest) |
 
 ### Alterações recentes mais relevantes
 
+- `helpdesk/desktop.py` (novo): aplicativo local com instância única, banco em
+  dados locais do usuário, porta livre, abertura do painel, simulação de
+  mensagens e encerramento limpo do servidor.
+- `build_windows.ps1` / `install_windows.ps1` (novos): empacotamento em `.exe`,
+  instalação em `%LOCALAPPDATA%\Programs` e atalho na Área de Trabalho.
 - `helpdesk/whatsapp.py` (novo): borda local da Cloud API — verificação do
   webhook, assinatura HMAC-SHA256 (fail closed), parser do payload para o
   formato do `/inbound` e `CloudApiTransport` com HTTP injetável.
@@ -108,16 +120,10 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 
 ## Próximos passos recomendados
 
-Frente sem bloqueio, com foco em demonstração:
-
-1. **Enriquecer o painel `/dashboard`** para o cenário da TV: resumo por
-   categoria e por atendente, e destaque visual para chamados com tempo em
-   aberto excessivo — mantendo a projeção restrita (sem telefone, nome de
-   solicitante ou texto das mensagens).
-2. **Alternativa menor:** um modo de roteiro que dispare a sequência de
-   mensagens da apresentação automaticamente.
-
-Ambos rodam local e não dependem das Fases 3/4 (bloqueadas por decisão).
+1. Usar o aplicativo Windows na demonstração e confirmar se o fluxo de abertura,
+   simulação e encerramento atende ao uso cotidiano.
+2. Decidir a estratégia do número antes da conexão real da Cloud API (Fase 3).
+3. Definir se a interface dos atendentes será painel web ou comandos (Fase 4).
 
 ## Como rodar o projeto
 
@@ -125,6 +131,9 @@ Ambos rodam local e não dependem das Fases 3/4 (bloqueadas por decisão).
 # Demonstração completa em um comando (Windows)
 .\demo.ps1                                   # cria banco fake, sobe servidor, abre painel
 .\demo.ps1 -Port 8010                        # em outra porta
+
+# Aplicativo Windows (build + instalação com atalho)
+.\build_windows.ps1 -Install
 
 # Peças da demonstração, na mão
 python -m helpdesk.demo seed --reset         # banco fake demo.sqlite3
@@ -151,8 +160,9 @@ python -m helpdesk.config check
 python -m helpdesk.demo check                # ou: .\demo.ps1 -Check
 ```
 
-Não há etapa de build: o projeto é Python puro, sem dependências de runtime
-(ver `requirements.txt`).
+O projeto-fonte é Python puro, sem dependências de runtime (ver
+`requirements.txt`). O build opcional do aplicativo usa somente o PyInstaller,
+isolado em `requirements-build.txt`.
 
 ## Riscos conhecidos
 
@@ -169,6 +179,9 @@ Não há etapa de build: o projeto é Python puro, sem dependências de runtime
   fechar a janela do servidor ou usar `-Port`.
 - **Escopo local:** o servidor só deve escutar em `127.0.0.1`, sem
   autenticação. Não expor para fora da máquina nesta fase.
+- **Dados do aplicativo Windows:** ficam em
+  `%LOCALAPPDATA%\TIChamadosWhatsApp`, separados do executável para sobreviver
+  à reinstalação. Apenas uma instância do aplicativo é permitida por sessão.
 
 ## Convenções de trabalho
 
@@ -192,3 +205,5 @@ Não há etapa de build: o projeto é Python puro, sem dependências de runtime
    `http://127.0.0.1:8000/dashboard`.
 7. (Opcional) Quadro de atendentes próprio: copiar `atendentes.exemplo.json`
    para `atendentes.json` (não versionado) e apontar `HELPDESK_ATTENDANTS_PATH`.
+8. (Opcional, Windows) gerar e instalar o aplicativo com
+   `.\build_windows.ps1 -Install`.
