@@ -42,8 +42,10 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
   ([passo a passo](docs/demo-local.md) · [roteiro](docs/roteiro-demo.md)).
 - Aplicativo Windows (`desktop_app.py` + `helpdesk/desktop.py`): controlador
   gráfico que inicia o servidor somente em `127.0.0.1`, abre o painel, simula
-  mensagens e persiste o banco fora da pasta de instalação. Build e atalho da
-  Área de Trabalho por `build_windows.ps1 -Install`.
+  mensagens e persiste o banco fora da pasta de instalação. O banco do
+  aplicativo começa vazio; o seed fictício continua disponível apenas pelos
+  comandos de demonstração. Build e atalho da Área de Trabalho por
+  `build_windows.ps1 -Install`.
 - Checagem automática da demonstração (`python -m helpdesk.demo check` ou
   `.\demo.ps1 -Check`): percorre o fluxo completo em ambiente descartável
   (banco temporário + porta efêmera) e aponta o passo que falhar.
@@ -83,9 +85,9 @@ triagem, criação de chamado, persistência, follow-up, idempotência e painel.
 
 ### Alterações recentes mais relevantes
 
-- `helpdesk/desktop.py` (novo): aplicativo local com instância única, banco em
-  dados locais do usuário, porta livre, abertura do painel, simulação de
-  mensagens e encerramento limpo do servidor.
+- `helpdesk/desktop.py` (novo): aplicativo local com instância única, banco vazio
+  na primeira execução, dados locais do usuário, porta livre, abertura do
+  painel, simulação opcional e encerramento limpo do servidor.
 - `build_windows.ps1` / `install_windows.ps1` (novos): empacotamento em `.exe`,
   instalação em `%LOCALAPPDATA%\Programs` e atalho na Área de Trabalho.
 - `helpdesk/whatsapp.py` (novo): borda local da Cloud API — verificação do

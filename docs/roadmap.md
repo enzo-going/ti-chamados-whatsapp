@@ -158,7 +158,8 @@ Pequenas melhorias de domínio, independentes do plano por fases:
   controlador gráfico com abertura do painel, simulação de mensagem, dados
   persistentes e encerramento do servidor. O build gera um `.exe` e instala um
   atalho na Área de Trabalho, sem ampliar o escopo além de `127.0.0.1`
-  (decisão 21).
+  (decisão 21). O banco do aplicativo inicia vazio; o seed fictício é uma ação
+  separada e explícita dos comandos de demonstração (decisão 22).
 
 ## Decisões em aberto (suas)
 

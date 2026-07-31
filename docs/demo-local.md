@@ -17,10 +17,12 @@ janela inicia o servidor somente em `127.0.0.1`, escolhe uma porta livre e abre
 o painel no navegador. A própria janela permite simular uma mensagem e mostra
 quantos chamados estão em aberto; ao fechá-la, o servidor é encerrado.
 
-Na primeira execução, o banco recebe os dados fictícios da demonstração. Nas
-execuções seguintes ele é preservado em `%LOCALAPPDATA%\TIChamadosWhatsApp`.
-O botão **Abrir pasta de dados** mostra o banco e o log local. O executável não
-conecta WhatsApp real e não precisa de Python instalado na máquina de destino.
+Na primeira execução, o painel começa vazio. Os dados fictícios só são criados
+quando os comandos de demonstração são executados explicitamente; a caixa de
+simulação também começa em branco. Nas execuções seguintes, os chamados criados
+pelo usuário são preservados em `%LOCALAPPDATA%\TIChamadosWhatsApp`. O botão
+**Abrir pasta de dados** mostra o banco e o log local. O executável não conecta
+WhatsApp real e não precisa de Python instalado na máquina de destino.
 
 Para gerar e instalar a partir do código-fonte:
 

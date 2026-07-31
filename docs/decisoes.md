@@ -409,13 +409,28 @@ servidor; um mutex do Windows impede duas instâncias usando o mesmo banco.
 **Dados fora do executável.** Banco e logs ficam em
 `%LOCALAPPDATA%\TIChamadosWhatsApp`, separados da instalação em
 `%LOCALAPPDATA%\Programs\TI Chamados WhatsApp`. Assim, atualizar o `.exe` não
-apaga os dados. Na primeira execução apenas, um banco vazio recebe o roteiro
-fictício; depois ele é preservado.
+apaga os dados. A política inicial de preencher um banco vazio com o roteiro
+fictício foi substituída pela decisão 22.
 
 **Escopo mantido.** O aplicativo não conecta WhatsApp real, não publica webhook
 e não transforma o painel somente leitura numa interface operacional. Ele é uma
 forma mais simples de iniciar e demonstrar capacidades já existentes; as Fases
 3 e 4 continuam dependentes das decisões registradas no roadmap.
+
+## 22. Aplicativo instalado inicia sem dados fictícios
+
+**Contexto:** o seed automático fazia o painel instalado parecer já utilizado e
+misturava o uso cotidiano com o roteiro de demonstração.
+
+**Decisão:** um banco novo do aplicativo Windows permanece vazio. O seed fake
+continua disponível somente pelos comandos explícitos `demo.ps1` e
+`python -m helpdesk.demo seed`; a caixa de simulação da janela também inicia em
+branco. Atualizações preservam apenas os dados que já existirem no banco local.
+
+**Ícone independente do executável.** O instalador copia um `.ico` versionado e
+faz o atalho apontar diretamente para ele. Além de separar a identidade visual
+de outros utilitários, a mudança de caminho evita que o Explorer reutilize o
+recurso antigo em cache.
 
 ---
 

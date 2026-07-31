@@ -23,7 +23,7 @@ try {
         --clean `
         --onefile `
         --windowed `
-        --icon (Join-Path $PSScriptRoot "assets\app-icon.png") `
+        --icon (Join-Path $PSScriptRoot "assets\app-icon-v2.ico") `
         --name "TI Chamados WhatsApp" `
         desktop_app.py
     if ($LASTEXITCODE -ne 0) {

@@ -14,11 +14,10 @@ from helpdesk.desktop import (
 
 
 class DesktopServerTests(unittest.TestCase):
-    def test_primeira_execucao_popula_e_serve_a_demonstracao(self):
+    def test_primeira_execucao_comeca_vazia_e_serve_o_painel(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             server = DesktopServer(Path(temp_dir))
-            self.assertTrue(server.seeded_on_start)
-            self.assertEqual(6, server.open_ticket_count())
+            self.assertEqual(0, server.open_ticket_count())
 
             try:
                 server.start()
@@ -31,10 +30,11 @@ class DesktopServerTests(unittest.TestCase):
                 with urllib.request.urlopen(server.dashboard_url, timeout=5) as response:
                     dashboard = response.read().decode("utf-8")
                 self.assertIn("Chamados em aberto", dashboard)
+                self.assertIn("Nenhum chamado em aberto.", dashboard)
 
                 result = server.simulate_message("a impressora do setor parou")
                 self.assertEqual("criado", result["outcome"])
-                self.assertEqual(7, server.open_ticket_count())
+                self.assertEqual(1, server.open_ticket_count())
             finally:
                 server.stop()
 
@@ -45,14 +45,14 @@ class DesktopServerTests(unittest.TestCase):
             data_directory = Path(temp_dir)
             first = DesktopServer(data_directory)
             try:
-                self.assertTrue(first.seeded_on_start)
+                first.start()
+                first.simulate_message("a impressora do setor parou")
                 original_count = len(first.repository.all())
             finally:
                 first.stop()
 
             second = DesktopServer(data_directory)
             try:
-                self.assertFalse(second.seeded_on_start)
                 self.assertEqual(original_count, len(second.repository.all()))
             finally:
                 second.stop()

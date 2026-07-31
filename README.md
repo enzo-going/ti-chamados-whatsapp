@@ -44,7 +44,9 @@ em [`docs/demo-local.md`](docs/demo-local.md).
 Trabalho, inicia o servidor local em uma porta livre, abre o painel e oferece
 uma caixa para simular mensagens. O banco persiste em
 `%LOCALAPPDATA%\TIChamadosWhatsApp`; fechar a janela encerra o servidor. Ela
-continua sendo uma demonstração local, sem conexão com WhatsApp real.
+continua sendo uma demonstração local, sem conexão com WhatsApp real. O painel
+inicia vazio: exemplos fictícios só são criados quando o comando de demonstração
+é executado explicitamente.
 
 ```bash
 # Diagnóstico seguro da configuração local (não exibe valores de variáveis)

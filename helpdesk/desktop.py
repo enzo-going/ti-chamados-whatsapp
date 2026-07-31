@@ -19,7 +19,7 @@ import threading
 import urllib.request
 import webbrowser
 
-from helpdesk.demo import seed_demo, send_message
+from helpdesk.demo import send_message
 from helpdesk.http_app import _build_gateway, make_server
 
 
@@ -81,10 +81,6 @@ class DesktopServer:
 
         gateway, repository = _build_gateway(str(self.database_path))
         self.repository = repository
-        self.seeded_on_start = False
-        if not self.repository.all():
-            seed_demo(self.repository)
-            self.seeded_on_start = True
 
         self._server = make_server(gateway, self.repository, "127.0.0.1", 0)
         host, port = self._server.server_address[:2]
@@ -222,11 +218,7 @@ def _run_window(server: DesktopServer) -> None:
     ttk.Label(frame, textvariable=status_var, font=("Segoe UI", 10)).pack(
         anchor="w"
     )
-    refresh_status(
-        "Dados de demonstração carregados"
-        if server.seeded_on_start
-        else "Dados locais carregados"
-    )
+    refresh_status("Dados locais carregados")
 
     ttk.Button(
         frame,
@@ -235,7 +227,7 @@ def _run_window(server: DesktopServer) -> None:
     ).pack(fill="x", pady=(18, 16))
 
     ttk.Label(frame, text="Simular uma mensagem recebida:").pack(anchor="w")
-    message_var = tk.StringVar(value="a impressora do setor parou")
+    message_var = tk.StringVar()
     message_entry = ttk.Entry(frame, textvariable=message_var)
     message_entry.pack(fill="x", pady=(5, 8))
 
@@ -310,8 +302,13 @@ def run_smoke_test() -> None:
                         "A rota de saúde do pacote não respondeu corretamente."
                     )
             with urllib.request.urlopen(server.dashboard_url, timeout=5) as response:
-                if "Chamados em aberto" not in response.read().decode("utf-8"):
+                dashboard = response.read().decode("utf-8")
+                if "Chamados em aberto" not in dashboard:
                     raise RuntimeError("O painel não foi encontrado no pacote.")
+                if "Nenhum chamado em aberto." not in dashboard:
+                    raise RuntimeError(
+                        "O aplicativo empacotado não iniciou com o painel vazio."
+                    )
             result = server.simulate_message("a impressora do setor parou")
             if result.get("outcome") != "criado":
                 raise RuntimeError("A simulação do pacote não criou um chamado.")

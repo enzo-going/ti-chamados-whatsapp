@@ -60,5 +60,6 @@ chamados recebidos por WhatsApp em tickets, com triagem, atribuição e históri
   passam a relatar o desfecho da mensagem — criado/follow-up/reaberto
   (ver [decisões](decisoes.md), decisões 18–20).
 - **Aplicativo Windows:** entregue — controlador local empacotável em `.exe`,
-  com atalho na Área de Trabalho, banco persistente e simulação de mensagens
-  (ver [demonstração](demo-local.md) e [decisões](decisoes.md), decisão 21).
+  com atalho na Área de Trabalho, banco persistente iniciado vazio e simulação
+  opcional de mensagens (ver [demonstração](demo-local.md) e
+  [decisões](decisoes.md), decisões 21–22).
