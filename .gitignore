@@ -41,3 +41,7 @@ Thumbs.db
 # Arquivos soltos do Obsidian no cofre (Bases/Canvas) — não fazem parte do projeto
 *.base
 *.canvas
+
+# Configuracao local de ferramentas de desenvolvimento
+AGENTS.md
+.mcp.json
