@@ -154,6 +154,12 @@ Pequenas melhorias de domínio, independentes do plano por fases:
 - **Desfecho explícito da mensagem** (`MessageOutcome`: criado/follow-up/
   reaberto): a CLI e o log do servidor passam a relatar o que de fato aconteceu,
   em vez de tratar todo evento como "novo" (decisão 20).
+- **Aplicativo Windows local** (`helpdesk/desktop.py` + `desktop_app.py`):
+  controlador gráfico com abertura do painel, simulação de mensagem, dados
+  persistentes e encerramento do servidor. O build gera um `.exe` e instala um
+  atalho na Área de Trabalho, sem ampliar o escopo além de `127.0.0.1`
+  (decisão 21). O banco do aplicativo inicia vazio; o seed fictício é uma ação
+  separada e explícita dos comandos de demonstração (decisão 22).
 
 ## Decisões em aberto (suas)
 
