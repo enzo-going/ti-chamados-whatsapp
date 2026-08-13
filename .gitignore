@@ -8,6 +8,7 @@ dist/
 
 # Ambientes virtuais
 .venv/
+.venv-build/
 venv/
 env/
 
@@ -29,6 +30,9 @@ atendentes.json
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Arquivo de configuração gerado pelo empacotador Windows
+*.spec
 
 # OS / editores
 .DS_Store
