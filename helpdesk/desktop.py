@@ -142,7 +142,10 @@ class DesktopServer:
 class _SingleInstanceGuard:
     """Mutex do Windows para evitar duas instâncias sobre o mesmo banco."""
 
-    def __init__(self) -> None:
+    def __init__(self, name: str = _MUTEX_NAME) -> None:
+        # O nome é parâmetro só para o teste usar um próprio: com o do app, o
+        # teste falhava sempre que o aplicativo instalado estivesse aberto.
+        self.name = name
         self.handle: int | None = None
         self.already_running = False
 
@@ -157,7 +160,7 @@ class _SingleInstanceGuard:
         ]
         kernel32.CreateMutexW.restype = ctypes.c_void_p
         ctypes.set_last_error(0)
-        handle = kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+        handle = kernel32.CreateMutexW(None, False, self.name)
         if not handle:
             raise OSError(
                 ctypes.get_last_error(), "Não foi possível iniciar o aplicativo."
