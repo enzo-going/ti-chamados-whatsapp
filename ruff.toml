@@ -1,0 +1,4 @@
+# Só regras que apontam erro de verdade (nome indefinido, import ou variável
+# sem uso, sintaxe); regras de estilo ficam de fora de propósito.
+[lint]
+select = ["F", "E9"]
