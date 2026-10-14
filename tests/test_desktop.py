@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+import uuid
 import urllib.request
 
 from helpdesk.desktop import (
@@ -69,8 +70,10 @@ class DesktopServerTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name == "nt", "mutex exclusivo do Windows")
     def test_mutex_detecta_segunda_instancia(self):
-        first = _SingleInstanceGuard()
-        second = _SingleInstanceGuard()
+        # Nome próprio: com o do app, o teste falharia com o aplicativo aberto.
+        nome = rf"Local\TIChamadosWhatsApp-teste-{uuid.uuid4().hex}"
+        first = _SingleInstanceGuard(nome)
+        second = _SingleInstanceGuard(nome)
         try:
             first.acquire()
             self.assertFalse(first.already_running)
