@@ -187,7 +187,8 @@ de TI). A página recebe apenas uma **projeção restrita** do chamado: número,
 categoria, prioridade, status, responsável, local/modo de atendimento, horário
 de abertura e tempo em aberto. Telefone, nome do solicitante e conteúdo das
 mensagens **não passam pela projeção** (há teste garantindo isso). Ordena por prioridade (alta
-primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
+primeiro) e idade, com auto-refresh leve via `<meta refresh>`. Acima da tabela,
+contagens por categoria, status e responsável mostram de relance onde está a carga.
 
 > É um painel **local de desenvolvimento** (`127.0.0.1`, sem autenticação),
 > não uma interface de produção.
@@ -206,7 +207,8 @@ primeiro) e idade, com auto-refresh leve via `<meta refresh>`.
 - [x] **Atendentes configuráveis** (JSON local com papéis e ativo/inativo, sem hardcode)
 - [x] **Painel local somente leitura** (`/dashboard`; projeção restrita, base do wallboard)
 - [ ] Painel web para os atendentes verem e **tratarem** os chamados
-- [ ] Métricas: tempo de resposta, chamados por categoria, carga por atendente
+- [x] Contagem no painel por categoria, status e responsável (carga por atendente)
+- [ ] Métrica de tempo de resposta
 - [ ] Notificação aos atendentes quando um chamado de prioridade alta entra
 
 ---

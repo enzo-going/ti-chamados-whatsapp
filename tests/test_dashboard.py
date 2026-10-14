@@ -10,6 +10,7 @@ from __future__ import annotations
 import threading
 import unittest
 import urllib.request
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from helpdesk.dashboard import (
@@ -190,6 +191,23 @@ class TestRenderHtml(unittest.TestCase):
         self.assertIn("Impressora", page)
         self.assertIn("Rede", page)
         self.assertIn("Atribuído", page)
+
+    def test_metricas_por_responsavel(self):
+        service = make_service()
+        tickets = [
+            service.handle_message(Message(sender="a", text="impressora sem toner")),
+            service.handle_message(
+                Message(sender="b", text="a rede caiu, ninguém consegue trabalhar")
+            ),
+            service.handle_message(Message(sender="c", text="o mouse parou")),
+        ]
+        tickets[2].assignee = None
+        page = render_dashboard(tickets)
+        self.assertIn("<h2>Por responsável</h2>", page)
+        self.assertIn("<li><span>Sem responsável</span><strong>1</strong></li>", page)
+        carga = Counter(t.assignee.name for t in tickets if t.assignee)
+        for nome, total in carga.items():
+            self.assertIn(f"<li><span>{nome}</span><strong>{total}</strong></li>", page)
 
     def test_metricas_nao_vazam_dados_sensiveis(self):
         service = make_service()

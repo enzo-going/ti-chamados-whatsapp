@@ -43,6 +43,9 @@ _STATUS_LABEL = {
     Status.FECHADO: "Fechado",
 }
 
+# Chamado ainda sem atendente: traço na tabela, "Sem responsável" nas métricas.
+_NO_ASSIGNEE = "—"
+
 
 @dataclass(frozen=True)
 class PanelRow:
@@ -107,7 +110,7 @@ def project(ticket: Ticket, now: datetime) -> PanelRow:
         category=category_label(ticket.category),
         priority=priority_label(ticket.priority),
         status=_STATUS_LABEL[ticket.status],
-        assignee=ticket.assignee.name if ticket.assignee else "—",
+        assignee=ticket.assignee.name if ticket.assignee else _NO_ASSIGNEE,
         local=_format_local(ticket),
         opened_at=_format_opened(ticket.created_at, now),
         open_for=format_duration(timedelta(minutes=age_minutes)),
@@ -225,6 +228,10 @@ def _metrics(rows: list[PanelRow]) -> str:
     """Blocos de contagem para leitura rápida em TV, sem ampliar a projeção."""
     by_category = Counter(r.category for r in rows)
     by_status = Counter(r.status for r in rows)
+    # Carga de cada atendente: quem acumula chamados aparece no topo da lista.
+    by_assignee = Counter(
+        "Sem responsável" if r.assignee == _NO_ASSIGNEE else r.assignee for r in rows
+    )
     return (
         '<div class="metricas">'
         "<section><h2>Por categoria</h2>"
@@ -232,6 +239,9 @@ def _metrics(rows: list[PanelRow]) -> str:
         "</section>"
         "<section><h2>Por status</h2>"
         f"{_metric_list(by_status)}"
+        "</section>"
+        "<section><h2>Por responsável</h2>"
+        f"{_metric_list(by_assignee)}"
         "</section>"
         "</div>"
     )
