@@ -18,5 +18,9 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Lint (so regras de erro, ver ruff.toml)
+        run: |
+          pip install ruff
+          ruff check .
       - name: Run tests
         run: python -m unittest discover -s tests -v

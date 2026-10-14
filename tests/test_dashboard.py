@@ -14,7 +14,6 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from helpdesk.dashboard import (
-    PanelRow,
     format_duration,
     panel_field_names,
     panel_rows,
