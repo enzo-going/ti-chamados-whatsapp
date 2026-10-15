@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Só leitura para o GITHUB_TOKEN: nenhum job aqui precisa escrever no repositório.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
