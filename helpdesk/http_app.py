@@ -182,7 +182,9 @@ def make_handler(
             if not webhook_app_secret:
                 self._json(503, {"error": "webhook não configurado"})
                 return
-            length = int(self.headers.get("Content-Length") or 0)
+            length = self._content_length()
+            if length is None:
+                return
             raw = self.rfile.read(length) if length else b""
             signature = self.headers.get("X-Hub-Signature-256")
             if not valid_signature(webhook_app_secret, raw, signature):
@@ -227,8 +229,25 @@ def make_handler(
                 {"processed": len(tickets), "ignored": len(ignored), "tickets": tickets},
             )
 
+        def _content_length(self) -> int | None:
+            """Tamanho do corpo, ou None (já respondido com 400) se o cabeçalho for inválido.
+
+            Negativo também é inválido: ``rfile.read(-n)`` leria até o cliente
+            fechar a conexão, prendendo a thread.
+            """
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                length = -1
+            if length < 0:
+                self._json(400, {"error": "Content-Length inválido"})
+                return None
+            return length
+
         def _read_json(self) -> dict | None:
-            length = int(self.headers.get("Content-Length") or 0)
+            length = self._content_length()
+            if length is None:
+                return None
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 return json.loads(raw)
