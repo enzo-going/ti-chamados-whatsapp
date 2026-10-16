@@ -191,7 +191,7 @@ def make_handler(
                 return
             try:
                 payload = json.loads(raw)
-            except json.JSONDecodeError:
+            except ValueError:  # JSON quebrado ou bytes que nem são UTF-8
                 self._json(400, {"error": "JSON inválido"})
                 return
             try:
@@ -232,7 +232,9 @@ def make_handler(
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 return json.loads(raw)
-            except json.JSONDecodeError:
+            # JSONDecodeError e UnicodeDecodeError (bytes que nem são UTF-8) são
+            # ValueError; antes o segundo escapava e o cliente ficava sem resposta.
+            except ValueError:
                 self._json(400, {"error": "JSON inválido"})
                 return None
 

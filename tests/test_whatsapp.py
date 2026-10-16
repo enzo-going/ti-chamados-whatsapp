@@ -407,6 +407,14 @@ class TestRotasDeWebhookNoServidor(unittest.TestCase):
         self.assertEqual(resposta["processed"], 0)
         self.assertEqual(resposta["ignored"], 1)
 
+    def test_corpo_assinado_que_nem_e_utf8_e_400(self):
+        # Sem resposta, a plataforma reentregaria o mesmo evento sem parar.
+        body = b"\xff\xfe\xfa"
+        headers = {"X-Hub-Signature-256": sign(body)}
+        status, resposta = self.post("/webhook", body, headers)
+        self.assertEqual(status, 400)
+        self.assertEqual(resposta["error"], "JSON inválido")
+
     def test_rotas_existentes_continuam_funcionando(self):
         status, _ = self.get("/health")
         self.assertEqual(status, 200)
