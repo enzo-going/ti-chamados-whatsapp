@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import shutil
 import tempfile
@@ -193,6 +194,33 @@ class TestHttpLocal(unittest.TestCase):
         self.assertFalse(body1["duplicate"])
         self.assertTrue(body2["duplicate"])
         self.assertEqual(body1["ticket_id"], body2["ticket_id"])
+
+    def _post_cru(self, corpo: bytes, content_length: str | None = None):
+        """POST com bytes e Content-Length exatos (o urllib corrigiria os dois)."""
+        conexao = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            conexao.putrequest("POST", "/inbound")
+            tamanho = str(len(corpo)) if content_length is None else content_length
+            conexao.putheader("Content-Length", tamanho)
+            conexao.endheaders()
+            conexao.send(corpo)
+            resposta = conexao.getresponse()
+            return resposta.status, json.loads(resposta.read())
+        finally:
+            conexao.close()
+
+    def test_json_que_nao_e_objeto_e_400(self):
+        status, corpo = self._post_cru(b"[]")
+        self.assertEqual(status, 400)
+        self.assertIn("objeto JSON", corpo["error"])
+
+    def test_corpo_que_nem_e_utf8_e_400_e_nao_derruba_a_conexao(self):
+        # json.loads levanta UnicodeDecodeError, que não é JSONDecodeError:
+        # antes a exceção escapava e o cliente ficava sem resposta.
+        status, corpo = self._post_cru(b"\xff\xfe\xfa")
+        self.assertEqual(status, 400)
+        self.assertEqual(corpo["error"], "JSON inválido")
+
 
 
 if __name__ == "__main__":
