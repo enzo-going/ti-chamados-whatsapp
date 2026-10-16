@@ -221,6 +221,13 @@ class TestHttpLocal(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(corpo["error"], "JSON inválido")
 
+    def test_content_length_invalido_e_400(self):
+        # Negativo também: rfile.read(-n) leria até o cliente desistir.
+        for valor in ("abc", "-5"):
+            with self.subTest(content_length=valor):
+                status, corpo = self._post_cru(b"{}", content_length=valor)
+                self.assertEqual(status, 400)
+                self.assertEqual(corpo["error"], "Content-Length inválido")
 
 
 if __name__ == "__main__":
